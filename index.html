@@ -1351,8 +1351,15 @@ async function addHoldingToSupabase(holding) {
 }
 
 async function deleteHoldingFromSupabase(holdingId) {
-  if (!currentUser) return;
-  const { error } = await sb.from('holdings').delete().eq('id', holdingId).eq('user_id', currentUser.id);
+  if (!currentUser) { throw new Error('Not logged in'); }
+  if (!holdingId) { throw new Error('No holding ID provided'); }
+  console.log('Deleting holding ID:', holdingId, 'for user:', currentUser.id);
+  const { data, error } = await sb.from('holdings')
+    .delete()
+    .eq('id', holdingId)
+    .eq('user_id', currentUser.id)
+    .select();
+  console.log('Delete result:', data, error);
   if (error) throw error;
 }
 
@@ -1703,24 +1710,34 @@ async function saveEditHolding(ticker) {
 }
 
 async function removeHolding(ticker) {
-  // Get the holding BEFORE removing from array so we still have the id
   const holding = holdings.find(h => h.ticker === ticker);
   if (!holding) { showToast('Could not find ' + ticker); return; }
+
+  console.log('Removing holding:', holding);
 
   closeSheet('add');
   showToast('🗑 Removing ' + ticker + '...');
 
-  // Delete from Supabase FIRST while we still have the id
   try {
-    if (holding.id) {
+    if (!holding.id) {
+      // No local ID — query Supabase directly by ticker
+      console.log('No local ID, querying Supabase for ticker:', ticker);
+      const { data, error } = await sb.from('holdings')
+        .delete()
+        .eq('ticker', ticker)
+        .eq('user_id', currentUser.id)
+        .select();
+      console.log('Direct delete result:', data, error);
+      if (error) throw error;
+    } else {
       await deleteHoldingFromSupabase(holding.id);
     }
-    // Only remove from local array after successful DB delete
     holdings = holdings.filter(h => h.ticker !== ticker);
     showToast('✅ ' + ticker + ' removed!');
   } catch(e) {
-    showToast('❌ Failed to remove ' + ticker + ' — try again');
-    return; // Don't remove locally if DB failed
+    console.error('Delete error:', e);
+    showToast('❌ Delete failed: ' + e.message);
+    return;
   }
 
   setTimeout(resetAddSheet, 300);
