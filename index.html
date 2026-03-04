@@ -740,7 +740,11 @@
     background: rgba(91,143,255,0.15); color: var(--blue);
     border-color: rgba(91,143,255,0.3);
   }
-  canvas { width: 100% !important; }
+  .chart-wrapper {
+    position: relative;
+    height: 180px;
+    width: 100%;
+  }
 
   .dash-stats-grid {
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
@@ -913,10 +917,11 @@
       <div class="app-name">AI <span>Insights</span></div>
     </div>
     <div class="tabs">
-      <div class="tab active" onclick="filterSuggestions('all', this)">All</div>
-      <div class="tab" onclick="filterSuggestions('buy', this)">Buy</div>
-      <div class="tab" onclick="filterSuggestions('sell', this)">Sell</div>
-      <div class="tab" onclick="filterSuggestions('hold', this)">Hold</div>
+      <div class="tab filter-tab active" onclick="filterSuggestions('all', this)">All</div>
+      <div class="tab filter-tab" onclick="filterSuggestions('buy', this)">📈 Buy</div>
+      <div class="tab filter-tab" onclick="filterSuggestions('sell', this)">📉 Sell</div>
+      <div class="tab filter-tab" onclick="filterSuggestions('hold', this)">⏸ Hold</div>
+      <div class="tab filter-tab" onclick="filterSuggestions('watch', this)">👁 Watch</div>
     </div>
   </div>
   <div class="content">
@@ -986,7 +991,7 @@
         <button class="range-tab" onclick="switchChartRange('3Y',this)">3Y</button>
         <button class="range-tab" onclick="switchChartRange('5Y',this)">5Y</button>
       </div>
-      <canvas id="portfolio-chart" height="180"></canvas>
+      <div class="chart-wrapper"><canvas id="portfolio-chart"></canvas></div>
     </div>
 
     <!-- Quick Stats -->
@@ -1804,7 +1809,7 @@ Base your analysis on the actual numbers provided. Be direct and specific.`;
 
 function renderSuggestions() {
   const list = document.getElementById('suggestions-list');
-  const filtered = currentFilter === 'all' ? allSuggestions : allSuggestions.filter(s => s.action === currentFilter);
+  const filtered = currentFilter === 'all' ? allSuggestions : allSuggestions.filter(s => (s.action || '').toLowerCase() === currentFilter.toLowerCase());
 
   if (allSuggestions.length === 0) {
     list.innerHTML = `<div class="empty-state"><div class="icon">🤖</div><p>Add holdings on the Portfolio tab to get AI-powered suggestions based on real-time market data.</p></div>`;
@@ -1833,7 +1838,7 @@ function renderSuggestions() {
 
 function filterSuggestions(filter, el) {
   currentFilter = filter;
-  document.querySelectorAll('#page-suggestions .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   renderSuggestions();
 }
@@ -2158,7 +2163,7 @@ async function renderPortfolioChart(range, currentValue, totalCost) {
   if (portfolioChart) { portfolioChart.destroy(); portfolioChart = null; }
 
   const ctx = canvas.getContext('2d');
-  const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.parentElement.offsetHeight || 180);
   gradient.addColorStop(0, isProfit ? 'rgba(0,229,160,0.3)' : 'rgba(255,77,109,0.3)');
   gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
@@ -2183,6 +2188,7 @@ async function renderPortfolioChart(range, currentValue, totalCost) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      resizeDelay: 0,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
