@@ -916,12 +916,12 @@
     <div class="header-top">
       <div class="app-name">AI <span>Insights</span></div>
     </div>
-    <div class="tabs">
-      <div class="tab filter-tab active" onclick="filterSuggestions('all', this)">All</div>
-      <div class="tab filter-tab" onclick="filterSuggestions('buy', this)">📈 Buy</div>
-      <div class="tab filter-tab" onclick="filterSuggestions('sell', this)">📉 Sell</div>
-      <div class="tab filter-tab" onclick="filterSuggestions('hold', this)">⏸ Hold</div>
-      <div class="tab filter-tab" onclick="filterSuggestions('watch', this)">👁 Watch</div>
+    <div class="tabs" id="filter-tabs-container">
+      <div class="tab filter-tab active" id="ftab-all" onclick="filterSuggestions('all')">All</div>
+      <div class="tab filter-tab" id="ftab-buy" onclick="filterSuggestions('buy')">📈 Buy</div>
+      <div class="tab filter-tab" id="ftab-sell" onclick="filterSuggestions('sell')">📉 Sell</div>
+      <div class="tab filter-tab" id="ftab-hold" onclick="filterSuggestions('hold')">⏸ Hold</div>
+      <div class="tab filter-tab" id="ftab-watch" onclick="filterSuggestions('watch')">👁 Watch</div>
     </div>
   </div>
   <div class="content">
@@ -1799,10 +1799,7 @@ Base your analysis on the actual numbers provided. Be direct and specific.`;
         : 'hold'
     }));
     // Reset filter to 'all' when fresh suggestions arrive
-    currentFilter = 'all';
-    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-    const allTab = document.querySelector('.filter-tab');
-    if (allTab) allTab.classList.add('active');
+    resetFilterTabs();
     renderSuggestions();
   } catch (e) {
     // Fallback suggestions based on actual P&L data
@@ -1825,40 +1822,63 @@ Base your analysis on the actual numbers provided. Be direct and specific.`;
 
 function renderSuggestions() {
   const list = document.getElementById('suggestions-list');
-  // Normalize all actions to lowercase before filtering
-  const normalized = allSuggestions.map(s => ({ ...s, action: (s.action || 'hold').toLowerCase().trim() }));
-  const filtered = currentFilter === 'all' ? normalized : normalized.filter(s => s.action === currentFilter);
+  if (!list) return;
 
   if (allSuggestions.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="icon">🤖</div><p>Add holdings on the Portfolio tab to get AI-powered suggestions based on real-time market data.</p></div>`;
-    return;
-  }
-  if (filtered.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>No ${currentFilter} suggestions right now.</p></div>`;
+    list.innerHTML = '<div class="empty-state"><div class="icon">🤖</div><p>Add holdings on the Portfolio tab to get AI-powered suggestions.</p></div>';
     return;
   }
 
-  list.innerHTML = filtered.map(s => `
-    <div class="ai-card ${s.action}">
-      <div class="ai-card-header">
-        <div class="ai-ticker">${s.ticker}</div>
-        <div class="ai-badge ${s.action}">${s.action.toUpperCase()}</div>
-      </div>
-      <div class="ai-reason">${s.reason}</div>
-      <div class="ai-confidence">
-        <div class="confidence-bar">
-          <div class="confidence-fill" style="width:${s.confidence}%;background:${s.action==='buy'?'var(--green)':s.action==='sell'?'var(--red)':s.action==='hold'?'var(--gold)':'var(--blue)'}"></div>
-        </div>
-        <div class="confidence-label">Confidence: ${s.confidence}%</div>
-      </div>
-    </div>`).join('');
+  // Always normalize actions
+  const normalized = allSuggestions.map(s => ({
+    ...s,
+    action: (s.action || 'hold').toLowerCase().trim().replace(/[^a-z]/g, '')
+  }));
+
+  const filtered = currentFilter === 'all'
+    ? normalized
+    : normalized.filter(s => s.action === currentFilter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>No ' + currentFilter + ' suggestions right now.</p></div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(s => {
+    const colorMap = { buy: 'var(--green)', sell: 'var(--red)', hold: 'var(--gold)', watch: 'var(--blue)' };
+    const color = colorMap[s.action] || 'var(--blue)';
+    return '<div class="ai-card ' + s.action + '">' +
+      '<div class="ai-card-header">' +
+        '<div class="ai-ticker">' + s.ticker + '</div>' +
+        '<div class="ai-badge ' + s.action + '">' + s.action.toUpperCase() + '</div>' +
+      '</div>' +
+      '<div class="ai-reason">' + s.reason + '</div>' +
+      '<div class="ai-confidence">' +
+        '<div class="confidence-bar">' +
+          '<div class="confidence-fill" style="width:' + s.confidence + '%;background:' + color + '"></div>' +
+        '</div>' +
+        '<div class="confidence-label">Confidence: ' + s.confidence + '%</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
-function filterSuggestions(filter, el) {
+function filterSuggestions(filter) {
   currentFilter = filter;
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+  // Update tab active states using IDs
+  ['all','buy','sell','hold','watch'].forEach(f => {
+    const tab = document.getElementById('ftab-' + f);
+    if (tab) tab.classList.toggle('active', f === filter);
+  });
   renderSuggestions();
+}
+
+function resetFilterTabs() {
+  currentFilter = 'all';
+  ['all','buy','sell','hold','watch'].forEach(f => {
+    const tab = document.getElementById('ftab-' + f);
+    if (tab) tab.classList.toggle('active', f === 'all');
+  });
 }
 
 // ==========================================
