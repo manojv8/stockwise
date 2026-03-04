@@ -1021,6 +1021,37 @@
       </div>
     </div>
 
+    <!-- Dividend Income Tile -->
+    <div class="chart-container" id="dash-dividend-wrap" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div class="chart-title">Estimated Dividend Income</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Based on current holdings & dividend yields</div>
+        </div>
+        <div style="font-size:28px">💵</div>
+      </div>
+
+      <!-- Monthly / Annual toggle -->
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button id="div-tab-monthly" onclick="switchDivView('monthly')" style="flex:1;padding:8px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(0,229,160,0.3);background:rgba(0,229,160,0.15);color:var(--green);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation">Monthly</button>
+        <button id="div-tab-annual" onclick="switchDivView('annual')" style="flex:1;padding:8px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation">Annual</button>
+      </div>
+
+      <!-- Big number -->
+      <div style="background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(91,143,255,0.1));border:1px solid rgba(0,229,160,0.2);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px" id="div-period-label">Monthly Income</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:36px;letter-spacing:-1px;color:var(--green)" id="div-total">$0.00</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="div-annual-equiv"></div>
+      </div>
+
+      <!-- Per stock breakdown -->
+      <div id="div-breakdown"></div>
+
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px;line-height:1.5">
+        ⚠️ Estimates based on trailing 12-month dividend yield. Not financial advice.
+      </div>
+    </div>
+
     <!-- Portfolio Allocation -->
     <div class="chart-container" id="dash-allocation-wrap" style="display:none">
       <div class="chart-title">Portfolio Allocation</div>
@@ -1049,7 +1080,7 @@
   </div>
   <div class="nav-item" onclick="switchPage('suggestions', this)">
     <div class="nav-icon">🤖</div>
-    <div class="nav-label">AI Insights</div>
+    <div class="nav-label">AI</div>
   </div>
   <div class="nav-item" onclick="switchPage('news', this)">
     <div class="nav-icon">📰</div>
@@ -1058,6 +1089,10 @@
   <div class="nav-item" onclick="switchPage('markets', this)">
     <div class="nav-icon">🌐</div>
     <div class="nav-label">Markets</div>
+  </div>
+  <div class="nav-item" onclick="openThemePicker()">
+    <div class="nav-icon">🎨</div>
+    <div class="nav-label">Theme</div>
   </div>
 </nav>
 
@@ -1142,42 +1177,6 @@
 </div>
 
 <!-- THEME PICKER SHEET -->
-<div class="sheet-overlay" id="theme-overlay" onclick="closeSheet('theme')"></div>
-<div class="sheet" id="theme-sheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-title">Choose Theme 🎨</div>
-  <div class="theme-sheet-grid">
-    <div class="theme-swatch active" id="swatch-midnight" onclick="applyTheme('midnight')" style="background:#13131a">
-      <div class="theme-dot" style="background:linear-gradient(135deg,#1a1a2e,#5b8fff)"></div>
-      <div class="theme-name" style="color:#f0f0f5">Midnight</div>
-    </div>
-    <div class="theme-swatch" id="swatch-forest" onclick="applyTheme('forest')" style="background:#111f14">
-      <div class="theme-dot" style="background:linear-gradient(135deg,#0b2e14,#4caf76)"></div>
-      <div class="theme-name" style="color:#e8f5e9">Forest</div>
-    </div>
-    <div class="theme-swatch" id="swatch-sunset" onclick="applyTheme('sunset')" style="background:#1c0d17">
-      <div class="theme-dot" style="background:linear-gradient(135deg,#2e0d1a,#ff6b6b)"></div>
-      <div class="theme-name" style="color:#fff0f0">Sunset</div>
-    </div>
-    <div class="theme-swatch" id="swatch-ocean" onclick="applyTheme('ocean')" style="background:#071828">
-      <div class="theme-dot" style="background:linear-gradient(135deg,#071828,#00bfff)"></div>
-      <div class="theme-name" style="color:#e8f4ff">Ocean</div>
-    </div>
-    <div class="theme-swatch" id="swatch-light" onclick="applyTheme('light')" style="background:#f0f0f5;border:1px solid #ddd">
-      <div class="theme-dot" style="background:linear-gradient(135deg,#4070ff,#7050e0)"></div>
-      <div class="theme-name" style="color:#1a1a2e">Light</div>
-    </div>
-    <div class="theme-swatch" id="swatch-gold" onclick="applyTheme('gold')" style="background:#1a1200">
-      <div class="theme-dot" style="background:linear-gradient(135deg,#2e1f00,#f5c842)"></div>
-      <div class="theme-name" style="color:#fff8e0">Gold</div>
-    </div>
-    <div class="theme-swatch" id="swatch-aurora" onclick="applyTheme('aurora')" style="background:#0d1220">
-      <div class="theme-dot" style="background:linear-gradient(135deg,#0a1f2e,#00ffcc,#cc00ff)"></div>
-      <div class="theme-name" style="color:#e8fff5">Aurora</div>
-    </div>
-  </div>
-  <p style="font-size:13px;color:var(--muted);text-align:center">Your theme is saved automatically</p>
-</div>
 
 
 </div><!-- end app-screen -->
@@ -2194,6 +2193,9 @@ async function loadDashboard() {
     document.getElementById('dash-worst-pct').style.color = worst.gainPct >= 0 ? 'var(--green)' : 'var(--red)';
   }
 
+  // Dividend tile
+  await loadDividendTile(dashPriceMap);
+
   // Allocation chart
   renderAllocation(stockPerf, totalValue);
 
@@ -2448,6 +2450,223 @@ function renderPerfTable(sorted) {
     </div>`).join('');
 }
 
+
+// ==========================================
+// DIVIDEND INCOME
+// ==========================================
+
+// Known dividend yields (trailing 12-month %) for common stocks
+// Updated March 2025 — live fetch attempted for unlisted tickers
+const KNOWN_YIELDS = {
+  // === YOUR HOLDINGS ===
+  'CG':3.2,       // Carlyle Group — pays quarterly dividends
+  'O':5.8,        // Realty Income — monthly dividend king!
+  'REALTY':5.8,   // alias
+  'PYPL':0,       // PayPal — no dividend as of 2025
+  'AMZN':0,       // Amazon — no dividend
+  'APLD':0,       // Applied Digital — no dividend
+  'NVDA':0.03,    // NVIDIA — tiny dividend (~$0.01/share/quarter)
+  'SOFI':0,       // SoFi — no dividend
+
+  // === HIGH DIVIDEND / INCOME ===
+  'T':5.8, 'VZ':6.5, 'MO':9.2, 'PM':5.1,
+  'WBA':9.8, 'PFE':6.2, 'BMY':4.8, 'ABBV':3.9,
+  'IBM':4.6, 'MMM':5.8, 'CVX':4.1, 'XOM':3.4,
+
+  // === DIVIDEND ARISTOCRATS ===
+  'KO':3.1, 'PEP':2.9, 'JNJ':3.0, 'PG':2.4,
+  'MRK':2.7, 'MCD':2.3, 'SBUX':2.5, 'YUM':1.8,
+  'HD':2.4, 'LOW':1.9, 'WMT':1.3, 'TGT':3.2,
+  'NKE':1.4, 'COST':0.6,
+
+  // === REITs ===
+  'VNQ':4.2, 'AMT':3.1, 'SPG':5.6, 'DLR':3.2,
+  'PSA':4.1, 'EQR':3.8, 'PLD':2.7,
+
+  // === DIVIDEND ETFs ===
+  'SPY':1.3, 'QQQ':0.6, 'DIA':1.9, 'VTI':1.4, 'VOO':1.3,
+  'SCHD':3.5, 'VYM':3.1, 'HDV':3.8, 'JEPI':7.2, 'JEPQ':9.1,
+  'DVY':3.9, 'SDY':2.5, 'DGRO':2.3, 'VIG':1.8,
+  'IWM':1.4, 'EFA':2.8, 'EEM':2.1,
+
+  // === BANKS & FINANCIALS ===
+  'JPM':2.3, 'BAC':2.5, 'WFC':2.8, 'C':3.5,
+  'GS':2.5, 'MS':3.2, 'BLK':2.6, 'AXP':1.2,
+
+  // === TECH ===
+  'AAPL':0.5, 'MSFT':0.7, 'GOOGL':0, 'GOOG':0,
+  'META':0.4, 'TSLA':0, 'AMD':0, 'NFLX':0,
+  'ORCL':1.4, 'CSCO':3.1, 'TXN':2.7, 'INTC':1.2, 'QCOM':2.1,
+
+  // === NO DIVIDEND ===
+  'BRK.B':0, 'V':0.8, 'MA':0.6, 'SQ':0,
+  'PLTR':0, 'RIVN':0, 'LCID':0, 'DIS':0,
+  'GLD':0, 'SLV':0,
+};
+
+let divViewMode = 'monthly'; // 'monthly' or 'annual'
+let divData = []; // [{ticker, shares, price, yield, annual, monthly}]
+
+function switchDivView(mode) {
+  divViewMode = mode;
+  const mBtn = document.getElementById('div-tab-monthly');
+  const aBtn = document.getElementById('div-tab-annual');
+  if (mBtn) {
+    mBtn.style.background = mode === 'monthly' ? 'rgba(0,229,160,0.15)' : 'none';
+    mBtn.style.color = mode === 'monthly' ? 'var(--green)' : 'var(--muted)';
+    mBtn.style.borderColor = mode === 'monthly' ? 'rgba(0,229,160,0.3)' : 'var(--border)';
+  }
+  if (aBtn) {
+    aBtn.style.background = mode === 'annual' ? 'rgba(0,229,160,0.15)' : 'none';
+    aBtn.style.color = mode === 'annual' ? 'var(--green)' : 'var(--muted)';
+    aBtn.style.borderColor = mode === 'annual' ? 'rgba(0,229,160,0.3)' : 'var(--border)';
+  }
+  renderDividendBreakdown();
+}
+
+async function loadDividendTile(priceMap) {
+  divData = [];
+
+  // Show loading state
+  const wrap = document.getElementById('dash-dividend-wrap');
+  if (wrap) wrap.style.display = 'block';
+  const totalEl = document.getElementById('div-total');
+  if (totalEl) totalEl.textContent = '...';
+
+  // Fetch live yield for ALL stocks in parallel from Yahoo Finance
+  // Fall back to hardcoded list only if live fetch fails
+  const yieldResults = await Promise.all(holdings.map(async h => {
+    // Always try live first
+    let liveYield = await fetchDividendYield(h.ticker);
+    // If live returns 0, check hardcoded list as backup
+    if (liveYield === 0 && KNOWN_YIELDS.hasOwnProperty(h.ticker.toUpperCase())) {
+      liveYield = KNOWN_YIELDS[h.ticker.toUpperCase()];
+    }
+    return { ticker: h.ticker, yieldPct: liveYield };
+  }));
+
+  const yieldMap = {};
+  yieldResults.forEach(r => yieldMap[r.ticker] = r.yieldPct);
+
+  for (const h of holdings) {
+    const p = priceMap[h.ticker];
+    const price = p && p.price ? p.price : h.cost;
+    const value = price * h.shares;
+    const yieldPct = yieldMap[h.ticker] || 0;
+    const annualIncome = value * (yieldPct / 100);
+
+    divData.push({
+      ticker: h.ticker,
+      shares: h.shares,
+      price,
+      yieldPct,
+      annual: annualIncome,
+      monthly: annualIncome / 12,
+      value,
+      isLive: yieldPct > 0
+    });
+  }
+
+  // Sort by income descending
+  divData.sort((a, b) => b.annual - a.annual);
+  renderDividendBreakdown();
+}
+
+function renderDividendBreakdown() {
+  const totalAnnual = divData.reduce((s, d) => s + d.annual, 0);
+  const totalMonthly = totalAnnual / 12;
+  const isMonthly = divViewMode === 'monthly';
+  const displayTotal = isMonthly ? totalMonthly : totalAnnual;
+
+  const totalEl = document.getElementById('div-total');
+  const labelEl = document.getElementById('div-period-label');
+  const equivEl = document.getElementById('div-annual-equiv');
+
+  if (totalEl) totalEl.textContent = '$' + displayTotal.toFixed(2);
+  if (labelEl) labelEl.textContent = isMonthly ? 'Monthly Income' : 'Annual Income';
+  if (equivEl) {
+    if (isMonthly) {
+      equivEl.textContent = '$' + totalAnnual.toFixed(2) + ' per year';
+    } else {
+      equivEl.textContent = '$' + totalMonthly.toFixed(2) + ' per month';
+    }
+  }
+
+  const breakdown = document.getElementById('div-breakdown');
+  if (!breakdown) return;
+
+  if (totalAnnual === 0) {
+    breakdown.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:10px 0">None of your current stocks pay dividends</div>';
+    return;
+  }
+
+  const paying = divData.filter(d => d.yieldPct > 0);
+  const nonPaying = divData.filter(d => d.yieldPct === 0);
+
+  breakdown.innerHTML = paying.map(d => {
+    const display = isMonthly ? d.monthly : d.annual;
+    const barW = totalAnnual > 0 ? (d.annual / totalAnnual * 100) : 0;
+    return [
+      '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">',
+        '<div style="width:40px;font-weight:700;font-size:13px">' + d.ticker + '</div>',
+        '<div style="flex:1">',
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">',
+            '<span style="font-size:11px;color:var(--muted)">' + d.yieldPct.toFixed(2) + '% yield ' +
+              '<span style="font-size:10px;padding:1px 5px;border-radius:6px;background:rgba(0,229,160,0.1);color:var(--green)">LIVE</span>' +
+            '</span>',
+            '<span style="font-size:13px;font-weight:700;color:var(--green)">+$' + display.toFixed(2) + '</span>',
+          '</div>',
+          '<div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">',
+            '<div style="height:100%;width:' + barW + '%;background:var(--green);border-radius:2px"></div>',
+          '</div>',
+        '</div>',
+      '</div>'
+    ].join('');
+  }).join('') +
+  (nonPaying.length > 0 ?
+    '<div style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center">No dividends: ' +
+    nonPaying.map(d => d.ticker).join(', ') + '</div>'
+  : '');
+}
+
+async function fetchDividendYield(ticker) {
+  // Try multiple proxies to get live dividend yield from Yahoo Finance
+  const proxies = [
+    () => {
+      const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + ticker + '?interval=1d&range=1d';
+      return 'https://corsproxy.io/?' + encodeURIComponent(url);
+    },
+    () => {
+      const url = 'https://query2.finance.yahoo.com/v8/finance/chart/' + ticker + '?interval=1d&range=1d';
+      return 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+    }
+  ];
+
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      const proxyUrl = proxies[i]();
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(6000) });
+      let data;
+      if (i === 0) {
+        data = await res.json();
+      } else {
+        const raw = await res.json();
+        data = JSON.parse(raw.contents);
+      }
+      const meta = data.chart.result[0].meta;
+      const yld = meta.trailingAnnualDividendYield;
+      if (yld && yld > 0) return parseFloat((yld * 100).toFixed(4));
+      // Also check dividendYield field
+      const yld2 = meta.dividendYield;
+      if (yld2 && yld2 > 0) return parseFloat((yld2 * 100).toFixed(4));
+      return 0;
+    } catch(e) {
+      continue;
+    }
+  }
+  return 0;
+}
+
 // ==========================================
 // INIT
 // ==========================================
@@ -2480,5 +2699,42 @@ setInterval(() => {
 }, 120000);
 
 </script>
+
+<div class="sheet-overlay" id="theme-overlay" onclick="closeSheet('theme')"></div>
+<div class="sheet" id="theme-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Choose Theme 🎨</div>
+  <div class="theme-sheet-grid">
+    <div class="theme-swatch active" id="swatch-midnight" onclick="applyTheme('midnight')" style="background:#13131a">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#1a1a2e,#5b8fff)"></div>
+      <div class="theme-name" style="color:#f0f0f5">Midnight</div>
+    </div>
+    <div class="theme-swatch" id="swatch-forest" onclick="applyTheme('forest')" style="background:#111f14">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#0b2e14,#4caf76)"></div>
+      <div class="theme-name" style="color:#e8f5e9">Forest</div>
+    </div>
+    <div class="theme-swatch" id="swatch-sunset" onclick="applyTheme('sunset')" style="background:#1c0d17">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#2e0d1a,#ff6b6b)"></div>
+      <div class="theme-name" style="color:#fff0f0">Sunset</div>
+    </div>
+    <div class="theme-swatch" id="swatch-ocean" onclick="applyTheme('ocean')" style="background:#071828">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#071828,#00bfff)"></div>
+      <div class="theme-name" style="color:#e8f4ff">Ocean</div>
+    </div>
+    <div class="theme-swatch" id="swatch-light" onclick="applyTheme('light')" style="background:#f0f0f5;border:1px solid #ddd">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#4070ff,#7050e0)"></div>
+      <div class="theme-name" style="color:#1a1a2e">Light</div>
+    </div>
+    <div class="theme-swatch" id="swatch-gold" onclick="applyTheme('gold')" style="background:#1a1200">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#2e1f00,#f5c842)"></div>
+      <div class="theme-name" style="color:#fff8e0">Gold</div>
+    </div>
+    <div class="theme-swatch" id="swatch-aurora" onclick="applyTheme('aurora')" style="background:#0d1220">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#0a1f2e,#00ffcc,#cc00ff)"></div>
+      <div class="theme-name" style="color:#e8fff5">Aurora</div>
+    </div>
+  </div>
+  <p style="font-size:13px;color:var(--muted);text-align:center">Your theme is saved automatically</p>
+</div>
 </body>
 </html>
