@@ -8,7 +8,97 @@
 <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 <title>Stockwise — Portfolio AI</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+
+  /* ==================== AUTH SCREEN ==================== */
+  #auth-screen {
+    position: fixed; inset: 0; z-index: 999;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px;
+    max-width: 430px; margin: 0 auto;
+  }
+  #auth-screen.hidden { display: none; }
+  #app-screen.hidden { display: none; }
+
+  .auth-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 42px; letter-spacing: -1px;
+    margin-bottom: 6px;
+  }
+  .auth-logo span { color: var(--green); }
+  .auth-tagline { font-size: 14px; color: var(--muted); margin-bottom: 40px; text-align: center; }
+
+  .auth-tabs { display: flex; gap: 0; margin-bottom: 24px; background: var(--surface2); border-radius: 12px; padding: 4px; width: 100%; }
+  .auth-tab {
+    flex: 1; padding: 10px; border-radius: 9px; font-size: 14px; font-weight: 600;
+    cursor: pointer; text-align: center; transition: all 0.2s; color: var(--muted); border: none; background: none;
+  }
+  .auth-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+  .auth-form { width: 100%; }
+  .auth-input-group { margin-bottom: 14px; }
+  .auth-input {
+    width: 100%; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; color: var(--text); font-size: 16px;
+    font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s;
+  }
+  .auth-input:focus { border-color: var(--accent); }
+  .auth-input::placeholder { color: var(--muted); }
+
+  .btn-auth-primary {
+    width: 100%; background: linear-gradient(135deg, var(--blue), var(--purple));
+    color: white; border: none; border-radius: 14px; padding: 16px;
+    font-size: 16px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; margin-bottom: 12px; transition: opacity 0.2s;
+  }
+  .btn-auth-primary:active { opacity: 0.85; }
+  .btn-auth-primary:disabled { opacity: 0.5; }
+
+  .btn-google {
+    width: 100%; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 14px; padding: 15px;
+    font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: border-color 0.2s; margin-bottom: 12px;
+  }
+  .btn-google:hover { border-color: var(--accent); }
+
+  .auth-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 4px 0 12px; color: var(--muted); font-size: 12px;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .auth-error {
+    background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.3);
+    border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--red);
+    margin-bottom: 12px; display: none;
+  }
+  .auth-error.show { display: block; }
+
+  .auth-success {
+    background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--green);
+    margin-bottom: 12px; display: none; text-align: center;
+  }
+  .auth-success.show { display: block; }
+
+  /* User avatar in header */
+  .user-menu { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .user-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple), var(--blue));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: white; overflow: hidden;
+  }
+  .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
   :root {
     --bg: #0a0a0f;
     --surface: #13131a;
@@ -631,7 +721,73 @@
   }
   .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
   .empty-state p { font-size: 14px; line-height: 1.5; }
+
 </style>
+</head>
+<body class="theme-midnight">
+
+<!-- Status Bar -->
+<div class="status-bar">
+  <span id="current-time">9:41</span>
+  <span>●●● 📶 🔋</span>
+</div>
+
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-logo">Stock<span>wise</span></div>
+  <div class="auth-tagline">AI-powered portfolio tracking</div>
+
+  <div style="width:100%">
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.88l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="auth-divider">or</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-success" id="auth-success"></div>
+
+    <!-- Sign In Form -->
+    <div id="form-signin" class="auth-form">
+      <div class="auth-input-group">
+        <input type="email" class="auth-input" id="signin-email" placeholder="Email address" autocomplete="email">
+      </div>
+      <div class="auth-input-group">
+        <input type="password" class="auth-input" id="signin-password" placeholder="Password" autocomplete="current-password">
+      </div>
+      <button class="btn-auth-primary" id="btn-signin" onclick="signInWithEmail()">Sign In</button>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="form-signup" class="auth-form" style="display:none">
+      <div class="auth-input-group">
+        <input type="text" class="auth-input" id="signup-name" placeholder="Your name">
+      </div>
+      <div class="auth-input-group">
+        <input type="email" class="auth-input" id="signup-email" placeholder="Email address" autocomplete="email">
+      </div>
+      <div class="auth-input-group">
+        <input type="password" class="auth-input" id="signup-password" placeholder="Password (min 6 chars)" autocomplete="new-password">
+      </div>
+      <button class="btn-auth-primary" id="btn-signup" onclick="signUpWithEmail()">Create Account</button>
+    </div>
+
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:16px">
+      Your portfolio data is private and secure 🔒
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP SCREEN -->
+<div id="app-screen" class="hidden">
+
 </head>
 <body>
 
@@ -645,8 +801,16 @@
 <div id="page-portfolio" class="page active">
   <div class="header">
     <div class="header-top">
-      <div class="app-name">Stock<span>wise</span></div>
-      <div class="avatar">JD</div>
+      <div>
+        <div class="app-name">Stock<span>wise</span></div>
+        <div id="user-greeting" style="font-size:12px;color:var(--muted);margin-top:1px"></div>
+      </div>
+      <div class="user-menu" onclick="openUserMenu()">
+        <div class="user-avatar">
+          <img id="user-avatar-img" style="display:none">
+          <span id="user-avatar-text">?</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -830,6 +994,35 @@
   <button class="btn-primary" onclick="addToWatchlist()">Add to Watchlist</button>
 </div>
 
+<!-- USER MENU SHEET -->
+<div class="sheet-overlay" id="user-overlay" onclick="closeSheet('user')"></div>
+<div class="sheet" id="user-sheet">
+  <div class="sheet-handle"></div>
+  <div style="text-align:center;padding:10px 0 20px">
+    <div class="user-avatar" style="width:64px;height:64px;font-size:24px;margin:0 auto 12px">
+      <img id="user-menu-img" style="display:none;width:100%;height:100%;object-fit:cover">
+      <span id="user-menu-initials">?</span>
+    </div>
+    <div id="user-menu-name" style="font-size:18px;font-weight:700;margin-bottom:4px"></div>
+    <div id="user-menu-email" style="font-size:13px;color:var(--muted)"></div>
+  </div>
+  <div style="background:var(--surface2);border-radius:14px;overflow:hidden;margin-bottom:16px">
+    <div onclick="openThemePicker();closeSheet('user')" style="padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">🎨</span>
+      <span style="font-weight:500">Change Theme</span>
+      <span style="margin-left:auto;color:var(--muted)">›</span>
+    </div>
+    <div onclick="refreshPortfolio()" style="padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">🔄</span>
+      <span style="font-weight:500">Refresh Portfolio</span>
+      <span style="margin-left:auto;color:var(--muted)">›</span>
+    </div>
+  </div>
+  <button onclick="signOut();closeSheet('user')" style="width:100%;background:rgba(255,77,109,0.1);color:var(--red);border:1px solid rgba(255,77,109,0.2);border-radius:14px;padding:15px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
+    Sign Out
+  </button>
+</div>
+
 <!-- THEME PICKER SHEET -->
 <div class="sheet-overlay" id="theme-overlay" onclick="closeSheet('theme')"></div>
 <div class="sheet" id="theme-sheet">
@@ -870,12 +1063,25 @@
 
 <div class="toast" id="toast"></div>
 
+
+</div><!-- end app-screen -->
+
+<div class="toast" id="toast"></div>
+
 <script>
+
+// ==========================================
+// ==========================================
+// SUPABASE CONFIG
+// ==========================================
+const SUPABASE_URL = 'https://grntqhcywbkakqtfozpi.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdybnRxaGN5d2JrYWtxdGZvenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTM0OTgsImV4cCI6MjA4ODIyOTQ5OH0.8EHk5hS2H01JvfHQYNKodOtsTmtYjF1QXCIIy7Z7dCU';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // ==========================================
 // APP STATE
 // ==========================================
-// Google Sheets backend — permanent storage
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycby2vqY_CVda4mjNxY8jkaLazR-5uEjKW8k4_1EZtwdvlQOefmQEOxQDYmEYmVhJuxod/exec';
+let currentUser = null;
 let holdings = [];
 let watchlist = JSON.parse(localStorage.getItem('stockwise_watchlist') || '["SPY","QQQ","BRK.B"]');
 let stockCache = {};
@@ -883,48 +1089,173 @@ let allSuggestions = [];
 let currentFilter = 'all';
 
 // ==========================================
-// GOOGLE SHEETS DATABASE
+// AUTH FUNCTIONS
 // ==========================================
-async function loadHoldingsFromSheet() {
+function showAuthScreen() {
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('app-screen').classList.add('hidden');
+}
+
+function showAppScreen() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.remove('hidden');
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('form-signin').style.display = tab === 'signin' ? 'block' : 'none';
+  document.getElementById('form-signup').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  clearAuthMessages();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('auth-success').classList.remove('show');
+}
+
+function showAuthSuccess(msg) {
+  const el = document.getElementById('auth-success');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('auth-error').classList.remove('show');
+}
+
+function clearAuthMessages() {
+  document.getElementById('auth-error').classList.remove('show');
+  document.getElementById('auth-success').classList.remove('show');
+}
+
+async function signInWithEmail() {
+  const email = document.getElementById('signin-email').value.trim();
+  const password = document.getElementById('signin-password').value;
+  if (!email || !password) { showAuthError('Please enter email and password'); return; }
+  const btn = document.getElementById('btn-signin');
+  btn.textContent = 'Signing in...'; btn.disabled = true;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  btn.textContent = 'Sign In'; btn.disabled = false;
+  if (error) { showAuthError(error.message); return; }
+  onSignedIn(data.user);
+}
+
+async function signUpWithEmail() {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  if (!name || !email || !password) { showAuthError('Please fill all fields'); return; }
+  if (password.length < 6) { showAuthError('Password must be at least 6 characters'); return; }
+  const btn = document.getElementById('btn-signup');
+  btn.textContent = 'Creating account...'; btn.disabled = true;
+  const { data, error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { full_name: name } }
+  });
+  btn.textContent = 'Create Account'; btn.disabled = false;
+  if (error) { showAuthError(error.message); return; }
+  if (data.user && !data.session) {
+    showAuthSuccess('✅ Check your email to confirm your account, then sign in!');
+  } else if (data.user) {
+    onSignedIn(data.user);
+  }
+}
+
+async function signInWithGoogle() {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if (error) showAuthError(error.message);
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  holdings = [];
+  allSuggestions = [];
+  showAuthScreen();
+  showToast('Signed out');
+}
+
+function onSignedIn(user) {
+  currentUser = user;
+  const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2);
+  const avatarEl = document.getElementById('user-avatar-text');
+  const avatarImg = document.getElementById('user-avatar-img');
+  if (avatarEl) avatarEl.textContent = initials;
+  if (avatarImg && user.user_metadata?.avatar_url) {
+    avatarImg.src = user.user_metadata.avatar_url;
+    avatarImg.style.display = 'block';
+    if (avatarEl) avatarEl.style.display = 'none';
+  }
+  const greetEl = document.getElementById('user-greeting');
+  if (greetEl) greetEl.textContent = 'Hi, ' + name.split(' ')[0] + '!';
+  showAppScreen();
+  loadSavedTheme();
+  loadHoldingsFromSupabase();
+}
+
+// ==========================================
+// SUPABASE DATABASE
+// ==========================================
+async function loadHoldingsFromSupabase() {
+  if (!currentUser) return;
   try {
     showToast('⏳ Loading your portfolio...');
-    const res = await fetch(SHEET_URL, { signal: AbortSignal.timeout(12000) });
-    const data = await res.json();
-    holdings = (data.data || []).map(r => ({
-      ticker: String(r.ticker).toUpperCase(),
+    const { data, error } = await sb.from('holdings')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('added_at', { ascending: true });
+    if (error) throw error;
+    holdings = (data || []).map(r => ({
+      id: r.id,
+      ticker: r.ticker,
       shares: parseFloat(r.shares),
       cost: parseFloat(r.cost),
-      addedAt: r.addedAt || Date.now()
-    })).filter(r => r.ticker && !isNaN(r.shares) && !isNaN(r.cost));
+      addedAt: r.added_at
+    }));
     showToast('✅ Portfolio loaded (' + holdings.length + ' holdings)');
     renderPortfolio();
     if (holdings.length > 0) generateSuggestions();
-  } catch (e) {
-    showToast('⚠️ Could not reach Google Sheets');
+  } catch(e) {
+    showToast('⚠️ Could not load portfolio');
     renderPortfolio();
   }
 }
 
-async function addHoldingToSheet(holding) {
-  await fetch(SHEET_URL, {
-    method: 'POST',
-    body: JSON.stringify({ action: 'add', ...holding }),
-    signal: AbortSignal.timeout(12000)
-  });
+async function addHoldingToSupabase(holding) {
+  if (!currentUser) return null;
+  const { data, error } = await sb.from('holdings').insert({
+    user_id: currentUser.id,
+    ticker: holding.ticker,
+    shares: holding.shares,
+    cost: holding.cost
+  }).select().single();
+  if (error) throw error;
+  return data;
 }
 
-async function deleteHoldingFromSheet(ticker) {
-  await fetch(SHEET_URL, {
-    method: 'POST',
-    body: JSON.stringify({ action: 'delete', ticker }),
-    signal: AbortSignal.timeout(12000)
-  });
+async function deleteHoldingFromSupabase(holdingId) {
+  if (!currentUser) return;
+  const { error } = await sb.from('holdings').delete().eq('id', holdingId).eq('user_id', currentUser.id);
+  if (error) throw error;
 }
 
-async function updateHoldingInSheet(ticker, shares, cost) {
-  // Delete old row, add updated row
-  await deleteHoldingFromSheet(ticker);
-  await addHoldingToSheet({ ticker, shares, cost, addedAt: Date.now() });
+async function updateHoldingInSupabase(holdingId, shares, cost) {
+  if (!currentUser) return;
+  const { error } = await sb.from('holdings').update({ shares, cost }).eq('id', holdingId).eq('user_id', currentUser.id);
+  if (error) throw error;
+}
+
+function saveHoldings() { /* handled by Supabase */ }
+function addHoldingToSheet(h) { return addHoldingToSupabase(h); }
+function deleteHoldingFromSheet(ticker) {
+  const h = holdings.find(x => x.ticker === ticker);
+  if (h && h.id) return deleteHoldingFromSupabase(h.id);
+}
+function updateHoldingInSheet(ticker, shares, cost) {
+  const h = holdings.find(x => x.ticker === ticker);
+  if (h && h.id) return updateHoldingInSupabase(h.id, shares, cost);
 }
 
 // ==========================================
@@ -1069,9 +1400,12 @@ async function addHolding() {
   const stock = await fetchStockPrice(ticker);
   if (stock.error || !stock.price) { showToast('❌ Check ticker & internet connection'); btn.textContent = 'Add to Portfolio'; btn.disabled = false; return; }
   const newHolding = { ticker, shares, cost, addedAt: Date.now() };
-  holdings.push(newHolding);
   btn.textContent = 'Saving...';
-  try { await addHoldingToSheet(newHolding); } catch(e) {}
+  try {
+    const saved = await addHoldingToSupabase(newHolding);
+    if (saved) newHolding.id = saved.id;
+  } catch(e) {}
+  holdings.push(newHolding);
   closeSheet('add');
   document.getElementById('add-ticker').value = '';
   document.getElementById('add-shares').value = '';
@@ -1595,6 +1929,30 @@ function openThemePicker() {
   document.getElementById('theme-sheet').classList.add('open');
 }
 
+function openUserMenu() {
+  if (!currentUser) return;
+  const name = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User';
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2);
+  document.getElementById('user-menu-initials').textContent = initials;
+  document.getElementById('user-menu-name').textContent = name;
+  document.getElementById('user-menu-email').textContent = currentUser.email;
+  const menuImg = document.getElementById('user-menu-img');
+  if (currentUser.user_metadata?.avatar_url) {
+    menuImg.src = currentUser.user_metadata.avatar_url;
+    menuImg.style.display = 'block';
+    document.getElementById('user-menu-initials').style.display = 'none';
+  }
+  document.getElementById('user-overlay').classList.add('open');
+  document.getElementById('user-sheet').classList.add('open');
+}
+
+function refreshPortfolio() {
+  stockCache = {};
+  loadHoldingsFromSupabase();
+  closeSheet('user');
+  showToast('🔄 Refreshing...');
+}
+
 function loadSavedTheme() {
   const saved = localStorage.getItem('stockwise_theme') || 'midnight';
   THEMES.forEach(t => document.body.classList.remove('theme-' + t));
@@ -1608,15 +1966,33 @@ function loadSavedTheme() {
 // INIT
 // ==========================================
 loadSavedTheme();
-loadHoldingsFromSheet();
+
+// Check Supabase session on load
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session && session.user) {
+    onSignedIn(session.user);
+  } else {
+    showAuthScreen();
+  }
+});
+
+// Listen for auth state changes (handles Google OAuth redirect)
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    onSignedIn(session.user);
+  } else if (event === 'SIGNED_OUT') {
+    showAuthScreen();
+  }
+});
 
 // Auto-refresh prices every 2 minutes
 setInterval(() => {
-  if (document.getElementById('page-portfolio').classList.contains('active')) {
-    stockCache = {}; // clear cache
+  if (currentUser && document.getElementById('page-portfolio') && document.getElementById('page-portfolio').classList.contains('active')) {
+    stockCache = {};
     renderPortfolio();
   }
 }, 120000);
+
 </script>
 </body>
 </html>
