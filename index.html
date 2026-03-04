@@ -1022,124 +1022,105 @@
 
 
 
-/* ================================================
-   DESKTOP — top navbar, fixed, clean
-   ================================================ */
+
+
+
+  #suggestions-list { grid-template-columns: repeat(3,1fr) !important; }
+  #news-list { grid-template-columns: repeat(3,1fr) !important; }
+  #watchlist-list { grid-template-columns: repeat(4,1fr) !important; }
+}
+
+
+  .desktop-brand { display: none; }
+  @media (min-width: 768px) {
+    .desktop-brand {
+      display: block !important;
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      flex-shrink: 0;
+      padding-right: 28px;
+      white-space: nowrap;
+    }
+  }
+
 @media (min-width: 768px) {
 
+  /* Full width body */
   body { max-width: 100% !important; margin: 0 !important; }
-
-  /* AUTH */
-  #auth-screen {
-    position: fixed !important;
-    inset: auto !important;
-    top: 50% !important; left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    width: 440px !important; height: auto !important;
-    border-radius: 28px !important;
-    border: 1px solid var(--border) !important;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.6) !important;
-    padding: 44px 40px !important;
-  }
 
   /* ---- FIXED TOP NAVBAR ---- */
   .bottom-nav {
     position: fixed !important;
-    top: 0 !important; left: 0 !important; right: 0 !important;
-    bottom: auto !important;
+    top: 0 !important; left: 0 !important; right: 0 !important; bottom: auto !important;
     width: 100% !important; max-width: 100% !important;
+    height: 60px !important;
     transform: none !important;
     flex-direction: row !important;
     align-items: center !important;
-    height: 62px !important;
     padding: 0 32px !important;
-    gap: 2px !important;
+    gap: 4px !important;
     background: var(--surface) !important;
     border-top: none !important;
     border-bottom: 1px solid var(--border) !important;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.2) !important;
-    z-index: 999 !important;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.3) !important;
+    z-index: 9999 !important;
   }
 
-  /* Brand logo in navbar */
-  .bottom-nav::before {
-    content: 'Stock\wise';
-    font-family: 'DM Serif Display', serif;
-    font-size: 20px;
-    color: var(--text);
-    letter-spacing: -0.5px;
-    padding-right: 36px;
-    flex-shrink: 0;
-    background: none;
-  }
+  .bottom-nav::before { display: none !important; content: '' !important; }
 
+  /* Nav items — horizontal pills */
   .nav-item {
     flex-direction: row !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 6px !important;
-    padding: 6px 14px !important;
+    padding: 7px 16px !important;
     border-radius: 8px !important;
     height: 38px !important;
     flex: 0 0 auto !important;
+    width: auto !important;
     transition: background 0.15s !important;
   }
-  .nav-item:hover { background: rgba(255,255,255,0.06) !important; }
-  .nav-item.active { background: rgba(91,143,255,0.14) !important; }
-
-  .nav-icon { font-size: 15px !important; filter: none !important; opacity: 0.55 !important; }
+  .nav-item:hover { background: rgba(255,255,255,0.07) !important; }
+  .nav-item.active { background: rgba(91,143,255,0.15) !important; }
+  .nav-icon { font-size: 15px !important; filter: none !important; opacity: 0.6 !important; }
   .nav-item.active .nav-icon { opacity: 1 !important; }
-
   .nav-label {
     font-size: 13px !important; font-weight: 600 !important;
     color: var(--muted) !important; display: block !important;
   }
   .nav-item.active .nav-label { color: var(--accent) !important; }
 
-  /* User avatar → right side of navbar */
+  /* User menu pushed to right */
   .user-menu {
-    margin-left: auto !important; flex-shrink: 0 !important;
-    display: flex !important; align-items: center !important;
-    gap: 8px !important; padding: 6px 14px !important;
-    border-radius: 10px !important; border: 1px solid var(--border) !important;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 14px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+    cursor: pointer !important;
     transition: background 0.15s !important;
   }
   .user-menu:hover { background: var(--surface2) !important; }
-
   #user-greeting {
-    display: block !important; font-size: 13px !important;
-    font-weight: 600 !important; color: var(--text) !important; margin: 0 !important;
+    display: block !important;
+    font-size: 13px !important; font-weight: 600 !important;
+    color: var(--text) !important; margin: 0 !important;
   }
 
-  /* ---- PAGES ---- */
-  /* Push all pages below the fixed navbar */
-  .page { padding-top: 62px !important; width: 100% !important; }
+  /* ---- PAGES: push below navbar, hide mobile headers ---- */
+  .page { padding-top: 60px !important; width: 100% !important; max-width: 100% !important; }
+  .header { display: none !important; }
 
-  /* Hide the page-level headers on desktop (we have the topnav) */
-  .page .header { display: none !important; }
-
-  /* Desktop page title bar */
-  .page::before {
-    display: block;
-    font-family: 'DM Serif Display', serif;
-    font-size: 28px;
-    color: var(--text);
-    padding: 32px 48px 8px;
-    max-width: 1300px;
-    margin: 0 auto;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  #page-portfolio::before { content: 'Portfolio'; }
-  #page-dashboard::before { content: 'Dashboard'; }
-  #page-suggestions::before { content: 'AI Insights'; }
-  #page-news::before { content: 'Market News'; }
-  #page-markets::before { content: 'Markets'; }
-
-  /* Content */
+  /* ---- CONTENT WRAPPER ---- */
   .content {
-    padding: 16px 48px 60px !important;
-    max-width: 1300px !important;
+    padding: 32px 48px 80px !important;
+    max-width: 1280px !important;
     margin: 0 auto !important;
     width: 100% !important;
     box-sizing: border-box !important;
@@ -1149,10 +1130,6 @@
   .portfolio-card { padding: 36px !important; margin-bottom: 28px !important; }
   .portfolio-value { font-size: 52px !important; }
   .portfolio-stats { grid-template-columns: repeat(4,1fr) !important; }
-
-  /* Add Stock button aligned right on desktop */
-  #page-portfolio .section-header { padding: 0 0 4px; }
-
   #holdings-list {
     display: grid !important;
     grid-template-columns: repeat(3,1fr) !important;
@@ -1163,43 +1140,41 @@
   .dash-stats-grid { grid-template-columns: repeat(4,1fr) !important; }
   .chart-wrapper { height: 260px !important; }
 
-  /* ---- AI / NEWS ---- */
+  /* ---- AI + NEWS ---- */
   #suggestions-list {
-    display: grid !important;
-    grid-template-columns: repeat(2,1fr) !important;
-    gap: 14px !important;
+    display: grid !important; grid-template-columns: repeat(2,1fr) !important; gap: 14px !important;
   }
   #news-list {
-    display: grid !important;
-    grid-template-columns: repeat(2,1fr) !important;
-    gap: 14px !important;
+    display: grid !important; grid-template-columns: repeat(2,1fr) !important; gap: 14px !important;
   }
 
   /* ---- MARKETS ---- */
   .market-overview { grid-template-columns: repeat(4,1fr) !important; }
   #watchlist-list {
-    display: grid !important;
-    grid-template-columns: repeat(3,1fr) !important;
-    gap: 12px !important;
+    display: grid !important; grid-template-columns: repeat(3,1fr) !important; gap: 12px !important;
   }
 
-  /* ---- SHEETS → centered modal ---- */
-  .sheet-overlay { z-index: 1000 !important; }
+  /* ---- SHEETS → centered modals ---- */
+  .sheet-overlay { z-index: 10000 !important; }
   .sheet {
-    top: 50% !important; bottom: auto !important;
-    left: 50% !important; right: auto !important;
-    width: 500px !important; max-width: 500px !important;
-    max-height: 82vh !important;
+    bottom: auto !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    width: 500px !important;
+    max-width: 500px !important;
+    max-height: 85vh !important;
     border-radius: 24px !important;
-    transform: translateX(-50%) translateY(-46%) !important;
+    transform: translateX(-50%) translateY(-44%) !important;
     opacity: 0 !important;
     pointer-events: none !important;
-    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease !important;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.5) !important;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s !important;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.6) !important;
   }
   .sheet.open {
     transform: translateX(-50%) translateY(-50%) !important;
-    opacity: 1 !important; pointer-events: all !important;
+    opacity: 1 !important;
+    pointer-events: all !important;
   }
 
   .ai-chat-btn { bottom: 32px !important; right: 40px !important; }
@@ -1209,6 +1184,7 @@
   #holdings-list { grid-template-columns: repeat(4,1fr) !important; }
   #suggestions-list { grid-template-columns: repeat(3,1fr) !important; }
   #news-list { grid-template-columns: repeat(3,1fr) !important; }
+  #watchlist-list { grid-template-columns: repeat(4,1fr) !important; }
 }
 
 </style>
@@ -1499,6 +1475,7 @@
 
 <!-- Bottom Navigation -->
 <nav class="bottom-nav">
+  <div class="desktop-brand" style="display:none">Stock<span style="color:var(--green)">wise</span></div>
   <div class="nav-item active" onclick="switchPage('portfolio', this)">
     <div class="nav-icon">📈</div>
     <div class="nav-label">Portfolio</div>
@@ -1733,14 +1710,7 @@ function onSignedIn(user) {
     if (avatarEl) avatarEl.style.display = 'none';
   }
   const greetEl = document.getElementById('user-greeting');
-  if (greetEl) {
-    greetEl.textContent = name.split(' ')[0];
-    greetEl.style.display = window.innerWidth >= 768 ? 'block' : 'none';
-  }
-  window.addEventListener('resize', () => {
-    const g = document.getElementById('user-greeting');
-    if (g && currentUser) g.style.display = window.innerWidth >= 768 ? 'block' : 'none';
-  });
+  if (greetEl) greetEl.textContent = name.split(' ')[0];
   showAppScreen();
   loadSavedTheme();
   loadHoldingsFromSupabase();
