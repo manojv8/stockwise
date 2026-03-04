@@ -129,7 +129,6 @@
   .portfolio-card { background: var(--card-gradient) !important; }
 
   /* Light theme specific overrides */
-  body.theme-light .status-bar { background: var(--bg); }
   body.theme-light .bottom-nav { background: rgba(245,245,247,0.92); border-top:1px solid rgba(0,0,0,0.1); }
   body.theme-light .nav-label { color: #888; }
   body.theme-light .nav-item.active .nav-label { color: var(--accent); }
@@ -166,27 +165,14 @@
     overflow-x: hidden;
   }
 
-  /* Status bar */
-  .status-bar {
-    height: 44px;
-    background: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    font-size: 12px;
-    font-weight: 600;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+
 
   /* Header */
   .header {
     padding: 8px 20px 20px;
     background: linear-gradient(180deg, var(--bg) 0%, transparent 100%);
     position: sticky;
-    top: 44px;
+    top: 0;
     z-index: 99;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -726,11 +712,7 @@
 </head>
 <body class="theme-midnight">
 
-<!-- Status Bar -->
-<div class="status-bar">
-  <span id="current-time">9:41</span>
-  <span>●●● 📶 🔋</span>
-</div>
+
 
 
 <!-- AUTH SCREEN -->
@@ -791,8 +773,11 @@
 </head>
 <body>
 
-
-
+<!-- Status Bar -->
+<div class="status-bar">
+  <span id="current-time">9:41</span>
+  <span>●●● 📶 🔋</span>
+</div>
 
 <!-- PORTFOLIO PAGE -->
 <div id="page-portfolio" class="page active">
@@ -1255,16 +1240,7 @@ function updateHoldingInSheet(ticker, shares, cost) {
   if (h && h.id) return updateHoldingInSupabase(h.id, shares, cost);
 }
 
-// ==========================================
-// TIME
-// ==========================================
-function updateTime() {
-  const now = new Date();
-  document.getElementById('current-time').textContent =
-    now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
-}
-updateTime();
-setInterval(updateTime, 1000);
+
 
 // ==========================================
 // PAGE NAVIGATION
