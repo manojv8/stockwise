@@ -1703,10 +1703,26 @@ async function saveEditHolding(ticker) {
 }
 
 async function removeHolding(ticker) {
-  holdings = holdings.filter(h => h.ticker !== ticker);
+  // Get the holding BEFORE removing from array so we still have the id
+  const holding = holdings.find(h => h.ticker === ticker);
+  if (!holding) { showToast('Could not find ' + ticker); return; }
+
   closeSheet('add');
-  showToast(ticker + ' removing...');
-  try { await deleteHoldingFromSheet(ticker); showToast(ticker + ' removed!'); } catch(e) {}
+  showToast('🗑 Removing ' + ticker + '...');
+
+  // Delete from Supabase FIRST while we still have the id
+  try {
+    if (holding.id) {
+      await deleteHoldingFromSupabase(holding.id);
+    }
+    // Only remove from local array after successful DB delete
+    holdings = holdings.filter(h => h.ticker !== ticker);
+    showToast('✅ ' + ticker + ' removed!');
+  } catch(e) {
+    showToast('❌ Failed to remove ' + ticker + ' — try again');
+    return; // Don't remove locally if DB failed
+  }
+
   setTimeout(resetAddSheet, 300);
   renderPortfolio();
   generateSuggestions();
