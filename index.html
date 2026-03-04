@@ -916,12 +916,12 @@
     <div class="header-top">
       <div class="app-name">AI <span>Insights</span></div>
     </div>
-    <div id="filter-tabs-container" style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding:4px 0 8px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0">
-      <button id="ftab-all"   onclick="filterSuggestions('all')"   style="flex-shrink:0;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid rgba(91,143,255,0.3);background:rgba(91,143,255,0.15);color:var(--blue);font-family:'DM Sans',sans-serif;-webkit-appearance:none;min-height:44px">All</button>
-      <button id="ftab-buy"   onclick="filterSuggestions('buy')"   style="flex-shrink:0;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;min-height:44px">Buy</button>
-      <button id="ftab-sell"  onclick="filterSuggestions('sell')"  style="flex-shrink:0;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;min-height:44px">Sell</button>
-      <button id="ftab-hold"  onclick="filterSuggestions('hold')"  style="flex-shrink:0;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;min-height:44px">Hold</button>
-      <button id="ftab-watch" onclick="filterSuggestions('watch')" style="flex-shrink:0;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;min-height:44px">Watch</button>
+    <div id="filter-tabs-container" style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding:4px 2px 8px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+      <button id="ftab-all"   style="flex-shrink:0;display:block;padding:0;width:64px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid rgba(91,143,255,0.3);background:rgba(91,143,255,0.15);color:var(--blue);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('all')" onclick="filterSuggestions('all')">All</button>
+      <button id="ftab-buy"   style="flex-shrink:0;display:block;padding:0;width:64px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('buy')" onclick="filterSuggestions('buy')">Buy</button>
+      <button id="ftab-sell"  style="flex-shrink:0;display:block;padding:0;width:64px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('sell')" onclick="filterSuggestions('sell')">Sell</button>
+      <button id="ftab-hold"  style="flex-shrink:0;display:block;padding:0;width:64px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('hold')" onclick="filterSuggestions('hold')">Hold</button>
+      <button id="ftab-watch" style="flex-shrink:0;display:block;padding:0;width:72px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('watch')" onclick="filterSuggestions('watch')">Watch</button>
     </div>
   </div>
   <div class="content">
@@ -1841,7 +1841,14 @@ function renderSuggestions() {
     : normalized.filter(s => s.action === currentFilter);
 
   if (filtered.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>No <strong>' + currentFilter + '</strong> suggestions right now.</p></div>';
+    const msgs = {
+      buy:  'No Buy signals right now. Your stocks may already be fairly valued.',
+      sell: 'No Sell signals right now. AI sees no reason to sell your current holdings.',
+      hold: 'No Hold suggestions right now.',
+      watch: 'No Watch suggestions right now.'
+    };
+    const msg = msgs[currentFilter] || 'No ' + currentFilter + ' suggestions right now.';
+    list.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>' + msg + '</p></div>';
     return;
   }
 
