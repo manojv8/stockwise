@@ -1783,10 +1783,26 @@ Base your analysis on the actual numbers provided. Be direct and specific.`;
     });
     const data = await res.json();
     const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
-    const clean = text.replace(/```json|```/g, '').trim();
+    // Robust JSON extraction - find first { to last }
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    if (jsonStart === -1 || jsonEnd === -1) throw new Error('No JSON found');
+    const clean = text.substring(jsonStart, jsonEnd + 1);
     const parsed = JSON.parse(clean);
-    document.getElementById('ai-analysis-text').textContent = parsed.portfolio_summary;
-    allSuggestions = parsed.suggestions || [];
+    document.getElementById('ai-analysis-text').textContent = parsed.portfolio_summary || '';
+    // Sanitize action to always be one of: buy, sell, hold, watch
+    const validActions = ['buy','sell','hold','watch'];
+    allSuggestions = (parsed.suggestions || []).map(s => ({
+      ...s,
+      action: validActions.includes((s.action||'').toLowerCase().trim())
+        ? (s.action).toLowerCase().trim()
+        : 'hold'
+    }));
+    // Reset filter to 'all' when fresh suggestions arrive
+    currentFilter = 'all';
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    const allTab = document.querySelector('.filter-tab');
+    if (allTab) allTab.classList.add('active');
     renderSuggestions();
   } catch (e) {
     // Fallback suggestions based on actual P&L data
@@ -1800,7 +1816,7 @@ Base your analysis on the actual numbers provided. Be direct and specific.`;
       else if (dayChg > 2) { action = 'watch'; reason = `Strong day up ${dayChg.toFixed(2)}%. Monitor for continued momentum or reversal.`; }
       else if (gainPct > 10) { action = 'hold'; reason = `Healthy ${gainPct.toFixed(1)}% gain. Hold and let winners run.`; }
       else { action = 'hold'; reason = `Performing near cost basis. Hold and monitor for catalysts.`; }
-      return { ticker: h.ticker, action, reason, confidence: Math.floor(55 + Math.random() * 30) };
+      return { ticker: h.ticker, action: action.toLowerCase().trim(), reason, confidence: Math.floor(55 + Math.random() * 30) };
     });
     document.getElementById('ai-analysis-text').textContent = `Your portfolio has ${holdings.length} position${holdings.length>1?'s':''}. Connect to live AI for detailed analysis.`;
     renderSuggestions();
@@ -1809,7 +1825,9 @@ Base your analysis on the actual numbers provided. Be direct and specific.`;
 
 function renderSuggestions() {
   const list = document.getElementById('suggestions-list');
-  const filtered = currentFilter === 'all' ? allSuggestions : allSuggestions.filter(s => (s.action || '').toLowerCase() === currentFilter.toLowerCase());
+  // Normalize all actions to lowercase before filtering
+  const normalized = allSuggestions.map(s => ({ ...s, action: (s.action || 'hold').toLowerCase().trim() }));
+  const filtered = currentFilter === 'all' ? normalized : normalized.filter(s => s.action === currentFilter);
 
   if (allSuggestions.length === 0) {
     list.innerHTML = `<div class="empty-state"><div class="icon">🤖</div><p>Add holdings on the Portfolio tab to get AI-powered suggestions based on real-time market data.</p></div>`;
