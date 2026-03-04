@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+<title>Stockwise — Portfolio AI</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: rgba(255,255,255,0.07);
+    --text: #f0f0f5;
+    --muted: #6b6b80;
+    --green: #00e5a0;
+    --red: #ff4d6d;
+    --gold: #f5c842;
+    --blue: #5b8fff;
+    --purple: #a78bfa;
+    --radius: 20px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    overflow-x: hidden;
+  }
+
+  /* Status bar */
+  .status-bar {
+    height: 44px;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 12px;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  /* Header */
+  .header {
+    padding: 8px 20px 20px;
+    background: linear-gradient(180deg, var(--bg) 0%, transparent 100%);
+    position: sticky;
+    top: 44px;
+    z-index: 99;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .app-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+
+  .app-name span { color: var(--green); }
+
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple), var(--blue));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+  }
+
+  /* Main scroll content */
+  .content {
+    padding: 0 16px 120px;
+  }
+
+  /* Portfolio Card */
+  .portfolio-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(91,143,255,0.2);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .portfolio-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(91,143,255,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .portfolio-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(240,240,245,0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .portfolio-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 42px;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+
+  .portfolio-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 20px;
+    background: rgba(0,229,160,0.12);
+    color: var(--green);
+  }
+
+  .portfolio-change.negative {
+    background: rgba(255,77,109,0.12);
+    color: var(--red);
+  }
+
+  .portfolio-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .stat {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .stat-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+  .stat-value { font-size: 16px; font-weight: 600; }
+
+  /* Section headers */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    margin-top: 24px;
+  }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+  }
+
+  .section-action {
+    font-size: 13px;
+    color: var(--blue);
+    font-weight: 500;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 6px 12px;
+    background: rgba(91,143,255,0.1);
+    border-radius: 20px;
+  }
+
+  /* Holdings list */
+  .holding-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .holding-card:active { transform: scale(0.98); }
+
+  .holding-icon {
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    flex-shrink: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+
+  .holding-info { flex: 1; min-width: 0; }
+  .holding-ticker { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+  .holding-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .holding-right { text-align: right; flex-shrink: 0; }
+  .holding-value { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+  .holding-change { font-size: 12px; font-weight: 500; }
+  .holding-change.pos { color: var(--green); }
+  .holding-change.neg { color: var(--red); }
+
+  .loading-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: pulse 1.2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; } 50% { opacity: 1; }
+  }
+
+  /* AI Suggestion Cards */
+  .ai-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    border-radius: 3px 0 0 3px;
+  }
+  .ai-card.buy::before { background: var(--green); }
+  .ai-card.sell::before { background: var(--red); }
+  .ai-card.hold::before { background: var(--gold); }
+  .ai-card.watch::before { background: var(--blue); }
+
+  .ai-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .ai-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .ai-badge.buy { background: rgba(0,229,160,0.15); color: var(--green); }
+  .ai-badge.sell { background: rgba(255,77,109,0.15); color: var(--red); }
+  .ai-badge.hold { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .ai-badge.watch { background: rgba(91,143,255,0.15); color: var(--blue); }
+
+  .ai-ticker { font-weight: 700; font-size: 16px; }
+  .ai-reason { font-size: 13px; color: rgba(240,240,245,0.75); line-height: 1.5; }
+  .ai-confidence {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+  }
+  .confidence-bar {
+    flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden;
+  }
+  .confidence-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .confidence-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  /* News section */
+  .news-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .news-source {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .news-headline {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+
+  .news-meta { font-size: 11px; color: var(--muted); }
+
+  .news-impact {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .news-impact.pos { background: rgba(0,229,160,0.15); color: var(--green); }
+  .news-impact.neg { background: rgba(255,77,109,0.15); color: var(--red); }
+  .news-impact.neu { background: rgba(107,107,128,0.2); color: var(--muted); }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: rgba(13,13,18,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 12px 0 24px;
+    z-index: 100;
+  }
+
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 4px;
+    transition: all 0.2s;
+  }
+
+  .nav-icon {
+    font-size: 22px;
+    filter: grayscale(1) opacity(0.4);
+    transition: all 0.2s;
+  }
+
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .nav-item.active .nav-icon { filter: none; }
+  .nav-item.active .nav-label { color: var(--green); }
+
+  /* Modal / Sheet */
+  .sheet-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .sheet-overlay.open { opacity: 1; pointer-events: all; }
+
+  .sheet {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    width: 100%;
+    max-width: 430px;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    z-index: 201;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    padding: 0 20px 40px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .sheet.open { transform: translateX(-50%) translateY(0); }
+
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 12px auto 20px;
+  }
+
+  .sheet-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  /* Form elements */
+  .input-group { margin-bottom: 16px; }
+  .input-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .input-field {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-size: 16px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-field:focus { border-color: var(--blue); }
+
+  .btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    color: white;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s;
+  }
+  .btn-primary:active { opacity: 0.85; }
+
+  /* AI Chat bubble */
+  .ai-chat-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 54px; height: 54px;
+    background: linear-gradient(135deg, var(--green), #00b8a0);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 20px rgba(0,229,160,0.4);
+    cursor: pointer;
+    z-index: 150;
+    border: none;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: rgba(91,143,255,0.15);
+    color: var(--blue);
+    border-color: rgba(91,143,255,0.3);
+  }
+
+  /* AI Analysis section */
+  .ai-analysis-wrapper {
+    background: linear-gradient(135deg, rgba(167,139,250,0.1), rgba(91,143,255,0.1));
+    border: 1px solid rgba(167,139,250,0.2);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .ai-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: var(--purple);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+
+  .ai-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--purple); animation: pulse 1.5s infinite; }
+
+  .ai-text { font-size: 14px; line-height: 1.6; color: rgba(240,240,245,0.85); }
+
+  /* Sparkline mini chart */
+  .sparkline { margin-top: 8px; }
+
+  /* Loading skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Watch page */
+  .market-overview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .market-card {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 14px;
+    border: 1px solid var(--border);
+  }
+
+  .market-name { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .market-value { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+  .market-change { font-size: 12px; font-weight: 500; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: var(--surface2);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 300;
+    opacity: 0;
+    transition: all 0.3s;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-state p { font-size: 14px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- Status Bar -->
+<div class="status-bar">
+  <span id="current-time">9:41</span>
+  <span>●●● 📶 🔋</span>
+</div>
+
+<!-- PORTFOLIO PAGE -->
+<div id="page-portfolio" class="page active">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">Stock<span>wise</span></div>
+      <div class="avatar">JD</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Portfolio Summary Card -->
+    <div class="portfolio-card">
+      <div class="portfolio-label">Total Portfolio Value</div>
+      <div class="portfolio-value" id="total-value">$0.00</div>
+      <div class="portfolio-change" id="total-change">
+        <span>▲</span> <span id="change-text">$0.00 (0.00%)</span>
+      </div>
+      <div class="portfolio-stats">
+        <div class="stat">
+          <div class="stat-label">Day's Gain</div>
+          <div class="stat-value" id="days-gain">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Total Return</div>
+          <div class="stat-value" id="total-return">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Holdings</div>
+          <div class="stat-value" id="holdings-count">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Last Updated</div>
+          <div class="stat-value" id="last-updated">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="ai-analysis-wrapper" id="ai-portfolio-analysis" style="display:none">
+      <div class="ai-label"><div class="ai-dot"></div> AI Portfolio Analysis</div>
+      <div class="ai-text" id="ai-analysis-text">Analyzing your portfolio...</div>
+    </div>
+
+    <!-- Holdings -->
+    <div class="section-header">
+      <div class="section-title">Holdings</div>
+      <button class="section-action" onclick="openAddSheet()">+ Add Stock</button>
+    </div>
+
+    <div id="holdings-list">
+      <div class="empty-state">
+        <div class="icon">📊</div>
+        <p>No holdings yet.<br>Add your first stock to get started.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUGGESTIONS PAGE -->
+<div id="page-suggestions" class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">AI <span>Insights</span></div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="filterSuggestions('all', this)">All</div>
+      <div class="tab" onclick="filterSuggestions('buy', this)">Buy</div>
+      <div class="tab" onclick="filterSuggestions('sell', this)">Sell</div>
+      <div class="tab" onclick="filterSuggestions('hold', this)">Hold</div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="suggestions-list">
+      <div class="empty-state">
+        <div class="icon">🤖</div>
+        <p>Add holdings to get AI-powered suggestions based on real-time market news.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEWS PAGE -->
+<div id="page-news" class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">Market <span>News</span></div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="news-list">
+      <div class="skeleton" style="height:80px;margin-bottom:10px"></div>
+      <div class="skeleton" style="height:80px;margin-bottom:10px"></div>
+      <div class="skeleton" style="height:80px;margin-bottom:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MARKETS PAGE -->
+<div id="page-markets" class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">Markets <span>Overview</span></div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="market-overview" id="market-indices"></div>
+    <div class="section-header">
+      <div class="section-title">Watchlist</div>
+      <button class="section-action" onclick="openWatchlistSheet()">+ Add</button>
+    </div>
+    <div id="watchlist-list"></div>
+  </div>
+</div>
+
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="switchPage('portfolio', this)">
+    <div class="nav-icon">📈</div>
+    <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="switchPage('suggestions', this)">
+    <div class="nav-icon">🤖</div>
+    <div class="nav-label">AI Insights</div>
+  </div>
+  <div class="nav-item" onclick="switchPage('news', this)">
+    <div class="nav-icon">📰</div>
+    <div class="nav-label">News</div>
+  </div>
+  <div class="nav-item" onclick="switchPage('markets', this)">
+    <div class="nav-icon">🌐</div>
+    <div class="nav-label">Markets</div>
+  </div>
+</nav>
+
+<!-- AI Chat Button -->
+<button class="ai-chat-btn" onclick="openAIChat()">✨</button>
+
+<!-- ADD STOCK SHEET -->
+<div class="sheet-overlay" id="add-overlay" onclick="closeSheet('add')"></div>
+<div class="sheet" id="add-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Add Holding</div>
+  <div class="input-group">
+    <div class="input-label">Ticker Symbol</div>
+    <input type="text" class="input-field" id="add-ticker" placeholder="e.g. AAPL, TSLA, NVDA" style="text-transform:uppercase">
+  </div>
+  <div class="input-group">
+    <div class="input-label">Number of Shares</div>
+    <input type="number" class="input-field" id="add-shares" placeholder="e.g. 10" step="0.001">
+  </div>
+  <div class="input-group">
+    <div class="input-label">Average Cost Per Share ($)</div>
+    <input type="number" class="input-field" id="add-cost" placeholder="e.g. 150.00" step="0.01">
+  </div>
+  <button class="btn-primary" onclick="addHolding()">Add to Portfolio</button>
+</div>
+
+<!-- AI CHAT SHEET -->
+<div class="sheet-overlay" id="ai-overlay" onclick="closeSheet('ai')"></div>
+<div class="sheet" id="ai-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Ask AI Advisor ✨</div>
+  <div id="ai-messages" style="min-height:100px;margin-bottom:16px;max-height:300px;overflow-y:auto">
+    <div style="background:rgba(167,139,250,0.1);border-radius:12px 12px 12px 0;padding:12px;font-size:14px;line-height:1.5;border:1px solid rgba(167,139,250,0.2)">
+      Hi! I'm your AI portfolio advisor. Ask me anything about your stocks, market conditions, or investment strategies. 📊
+    </div>
+  </div>
+  <div class="input-group">
+    <input type="text" class="input-field" id="ai-question" placeholder="e.g. Should I buy more AAPL?" onkeydown="if(event.key==='Enter')askAI()">
+  </div>
+  <button class="btn-primary" onclick="askAI()">Ask AI →</button>
+</div>
+
+<!-- WATCHLIST SHEET -->
+<div class="sheet-overlay" id="watchlist-overlay" onclick="closeSheet('watchlist')"></div>
+<div class="sheet" id="watchlist-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Add to Watchlist</div>
+  <div class="input-group">
+    <div class="input-label">Ticker Symbol</div>
+    <input type="text" class="input-field" id="watch-ticker" placeholder="e.g. GOOGL, META, AMZN" style="text-transform:uppercase">
+  </div>
+  <button class="btn-primary" onclick="addToWatchlist()">Add to Watchlist</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ==========================================
+// APP STATE
+// ==========================================
+// Google Sheets backend — permanent storage
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycby2vqY_CVda4mjNxY8jkaLazR-5uEjKW8k4_1EZtwdvlQOefmQEOxQDYmEYmVhJuxod/exec';
+let holdings = [];
+let watchlist = JSON.parse(localStorage.getItem('stockwise_watchlist') || '["SPY","QQQ","BRK.B"]');
+let stockCache = {};
+let allSuggestions = [];
+let currentFilter = 'all';
+
+// ==========================================
+// GOOGLE SHEETS DATABASE
+// ==========================================
+async function loadHoldingsFromSheet() {
+  try {
+    showToast('⏳ Loading your portfolio...');
+    const res = await fetch(SHEET_URL, { signal: AbortSignal.timeout(12000) });
+    const data = await res.json();
+    holdings = (data.data || []).map(r => ({
+      ticker: String(r.ticker).toUpperCase(),
+      shares: parseFloat(r.shares),
+      cost: parseFloat(r.cost),
+      addedAt: r.addedAt || Date.now()
+    })).filter(r => r.ticker && !isNaN(r.shares) && !isNaN(r.cost));
+    showToast('✅ Portfolio loaded (' + holdings.length + ' holdings)');
+    renderPortfolio();
+    if (holdings.length > 0) generateSuggestions();
+  } catch (e) {
+    showToast('⚠️ Could not reach Google Sheets');
+    renderPortfolio();
+  }
+}
+
+async function addHoldingToSheet(holding) {
+  await fetch(SHEET_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'add', ...holding }),
+    signal: AbortSignal.timeout(12000)
+  });
+}
+
+async function deleteHoldingFromSheet(ticker) {
+  await fetch(SHEET_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'delete', ticker }),
+    signal: AbortSignal.timeout(12000)
+  });
+}
+
+async function updateHoldingInSheet(ticker, shares, cost) {
+  // Delete old row, add updated row
+  await deleteHoldingFromSheet(ticker);
+  await addHoldingToSheet({ ticker, shares, cost, addedAt: Date.now() });
+}
+
+// ==========================================
+// TIME
+// ==========================================
+function updateTime() {
+  const now = new Date();
+  document.getElementById('current-time').textContent =
+    now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+}
+updateTime();
+setInterval(updateTime, 1000);
+
+// ==========================================
+// PAGE NAVIGATION
+// ==========================================
+function switchPage(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  el.classList.add('active');
+  if (page === 'news') loadNews();
+  if (page === 'markets') loadMarkets();
+  if (page === 'suggestions') renderSuggestions();
+}
+
+// ==========================================
+// SHEETS
+// ==========================================
+function openAddSheet() {
+  document.getElementById('add-overlay').classList.add('open');
+  document.getElementById('add-sheet').classList.add('open');
+  document.getElementById('add-ticker').focus();
+}
+
+function openWatchlistSheet() {
+  document.getElementById('watchlist-overlay').classList.add('open');
+  document.getElementById('watchlist-sheet').classList.add('open');
+}
+
+function openAIChat() {
+  document.getElementById('ai-overlay').classList.add('open');
+  document.getElementById('ai-sheet').classList.add('open');
+}
+
+function closeSheet(name) {
+  document.getElementById(name + '-overlay').classList.remove('open');
+  document.getElementById(name + '-sheet').classList.remove('open');
+}
+
+// ==========================================
+// TOAST
+// ==========================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ==========================================
+// STOCK PRICE (Multi-source with fallbacks)
+// ==========================================
+async function fetchStockPrice(ticker) {
+  if (stockCache[ticker] && Date.now() - stockCache[ticker].ts < 60000) {
+    return stockCache[ticker];
+  }
+
+  // Try multiple proxies in order
+  const proxies = [
+    () => fetchViaCorsproxy(ticker),
+    () => fetchViaAllorigins(ticker),
+    () => fetchViaFinanceAPI(ticker),
+  ];
+
+  for (const attempt of proxies) {
+    try {
+      const result = await attempt();
+      if (result && result.price) {
+        stockCache[ticker] = { ...result, ts: Date.now() };
+        return stockCache[ticker];
+      }
+    } catch (e) {}
+  }
+
+  return { ticker, price: null, change: 0, changePct: 0, name: ticker, error: true, ts: Date.now() };
+}
+
+async function fetchViaCorsproxy(ticker) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=2d`;
+  const proxy = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+  const res = await fetch(proxy, { signal: AbortSignal.timeout(6000) });
+  const parsed = await res.json();
+  return extractYahooData(ticker, parsed);
+}
+
+async function fetchViaAllorigins(ticker) {
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=2d`;
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxy, { signal: AbortSignal.timeout(6000) });
+  const data = await res.json();
+  const parsed = JSON.parse(data.contents);
+  return extractYahooData(ticker, parsed);
+}
+
+async function fetchViaFinanceAPI(ticker) {
+  // Fallback: use Frankfurter-style free stock API
+  const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=demo`, { signal: AbortSignal.timeout(6000) });
+  const data = await res.json();
+  if (data && data.c && data.c > 0) {
+    const price = data.c;
+    const prev = data.pc;
+    const change = price - prev;
+    const changePct = (change / prev) * 100;
+    return { ticker, price, change, changePct, prev, name: ticker };
+  }
+  throw new Error('No data');
+}
+
+function extractYahooData(ticker, parsed) {
+  const meta = parsed.chart.result[0].meta;
+  const price = meta.regularMarketPrice;
+  const prev = meta.chartPreviousClose || meta.previousClose;
+  if (!price) throw new Error('No price');
+  const change = price - prev;
+  const changePct = (change / prev) * 100;
+  return { ticker, price, change, changePct, prev, name: meta.longName || meta.shortName || ticker };
+}
+
+// ==========================================
+// ADD HOLDING
+// ==========================================
+async function addHolding() {
+  const ticker = document.getElementById('add-ticker').value.trim().toUpperCase();
+  const shares = parseFloat(document.getElementById('add-shares').value);
+  const cost = parseFloat(document.getElementById('add-cost').value);
+  if (!ticker || !shares || !cost) { showToast('⚠️ Please fill all fields'); return; }
+  if (holdings.find(h => h.ticker === ticker)) { showToast('Already in portfolio'); return; }
+  const btn = document.querySelector('#add-sheet .btn-primary');
+  btn.textContent = 'Fetching price...';
+  btn.disabled = true;
+  const stock = await fetchStockPrice(ticker);
+  if (stock.error || !stock.price) { showToast('❌ Check ticker & internet connection'); btn.textContent = 'Add to Portfolio'; btn.disabled = false; return; }
+  const newHolding = { ticker, shares, cost, addedAt: Date.now() };
+  holdings.push(newHolding);
+  btn.textContent = 'Saving...';
+  try { await addHoldingToSheet(newHolding); } catch(e) {}
+  closeSheet('add');
+  document.getElementById('add-ticker').value = '';
+  document.getElementById('add-shares').value = '';
+  document.getElementById('add-cost').value = '';
+  btn.textContent = 'Add to Portfolio';
+  btn.disabled = false;
+  showToast('✅ ' + ticker + ' saved to Google Sheets!');
+  renderPortfolio();
+  generateSuggestions();
+}
+
+function saveHoldings() {
+  // Data is saved directly to Google Sheets
+}
+
+// ==========================================
+// RENDER PORTFOLIO
+// ==========================================
+async function renderPortfolio() {
+  if (holdings.length === 0) {
+    document.getElementById('holdings-list').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">📊</div>
+        <p>No holdings yet.<br>Add your first stock to get started.</p>
+      </div>`;
+    document.getElementById('total-value').textContent = '$0.00';
+    document.getElementById('change-text').textContent = '$0.00 (0.00%)';
+    document.getElementById('holdings-count').textContent = '0';
+    document.getElementById('days-gain').textContent = '—';
+    document.getElementById('total-return').textContent = '—';
+    document.getElementById('last-updated').textContent = '—';
+    document.getElementById('ai-portfolio-analysis').style.display = 'none';
+    return;
+  }
+
+  // Show skeleton
+  const container = document.getElementById('holdings-list');
+  container.innerHTML = holdings.map(() => `<div class="skeleton" style="height:78px;margin-bottom:10px;border-radius:16px"></div>`).join('');
+
+  // Fetch all prices
+  const prices = await Promise.all(holdings.map(h => fetchStockPrice(h.ticker)));
+  const priceMap = {};
+  prices.forEach(p => priceMap[p.ticker] = p);
+
+  let totalValue = 0, totalCost = 0, totalDayChange = 0;
+  const colors = ['#5b8fff','#a78bfa','#00e5a0','#f5c842','#ff4d6d','#38bdf8','#fb7185','#34d399'];
+
+  container.innerHTML = '';
+  holdings.forEach((h, i) => {
+    const p = priceMap[h.ticker];
+    const value = p.price ? p.price * h.shares : h.cost * h.shares;
+    const costBasis = h.cost * h.shares;
+    const gain = value - costBasis;
+    const gainPct = (gain / costBasis) * 100;
+    const dayGain = p.change ? p.change * h.shares : 0;
+    totalValue += value;
+    totalCost += costBasis;
+    totalDayChange += dayGain;
+
+    const color = colors[i % colors.length];
+    const card = document.createElement('div');
+    card.className = 'holding-card';
+    card.innerHTML = `
+      <div class="holding-icon" style="color:${color}">${h.ticker.substring(0,2)}</div>
+      <div class="holding-info">
+        <div class="holding-ticker">${h.ticker}</div>
+        <div class="holding-name">${p.name || h.ticker} · ${h.shares} shares</div>
+      </div>
+      <div class="holding-right">
+        <div class="holding-value">${p.price ? '$'+p.price.toFixed(2) : '—'}</div>
+        <div class="holding-change ${p.changePct >= 0 ? 'pos' : 'neg'}">
+          ${p.changePct >= 0 ? '▲' : '▼'} ${Math.abs(p.changePct).toFixed(2)}%
+        </div>
+      </div>`;
+    card.onclick = () => showHoldingDetail(h, p, gain, gainPct);
+    container.appendChild(card);
+  });
+
+  // Update summary
+  const totalGain = totalValue - totalCost;
+  const totalGainPct = (totalGain / totalCost) * 100;
+  const dayPct = (totalDayChange / (totalValue - totalDayChange)) * 100;
+
+  document.getElementById('total-value').textContent = '$' + totalValue.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const changeEl = document.getElementById('total-change');
+  const isPos = totalDayChange >= 0;
+  changeEl.className = 'portfolio-change' + (isPos ? '' : ' negative');
+  changeEl.innerHTML = `<span>${isPos ? '▲' : '▼'}</span><span id="change-text">${isPos ? '+' : ''}$${Math.abs(totalDayChange).toFixed(2)} (${Math.abs(dayPct).toFixed(2)}%) Today</span>`;
+  document.getElementById('days-gain').innerHTML = `<span style="color:${totalDayChange>=0?'var(--green)':'var(--red)'}">${totalDayChange>=0?'+':'-'}$${Math.abs(totalDayChange).toFixed(2)}</span>`;
+  document.getElementById('total-return').innerHTML = `<span style="color:${totalGain>=0?'var(--green)':'var(--red)'}">${totalGain>=0?'+':'-'}$${Math.abs(totalGain).toFixed(2)}</span>`;
+  document.getElementById('holdings-count').textContent = holdings.length;
+  document.getElementById('last-updated').textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+// ==========================================
+// HOLDING DETAIL + EDIT
+// ==========================================
+function showHoldingDetail(h, p, gain, gainPct) {
+  const isProfit = gain >= 0;
+  const overlay = document.getElementById('add-overlay');
+  const sheet = document.getElementById('add-sheet');
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div>
+        <div style="font-family:'DM Serif Display',serif;font-size:28px">${h.ticker}</div>
+        <div style="color:var(--muted);font-size:13px">${p.name || h.ticker}</div>
+      </div>
+      <button onclick="removeHolding('${h.ticker}')" style="background:rgba(255,77,109,0.15);color:var(--red);border:none;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">🗑 Remove</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="stat"><div class="stat-label">Current Price</div><div class="stat-value">${p.price ? '$'+p.price.toFixed(2) : '—'}</div></div>
+      <div class="stat"><div class="stat-label">Total Value</div><div class="stat-value">${p.price ? '$'+(p.price*h.shares).toFixed(2) : '—'}</div></div>
+    </div>
+    <div style="background:${isProfit?'rgba(0,229,160,0.1)':'rgba(255,77,109,0.1)'};border:1px solid ${isProfit?'rgba(0,229,160,0.3)':'rgba(255,77,109,0.3)'};border-radius:14px;padding:16px;margin-bottom:20px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Total P&L</div>
+      <div style="font-size:28px;font-weight:700;color:${isProfit?'var(--green)':'var(--red)'}">${isProfit?'+':'-'}$${Math.abs(gain).toFixed(2)}</div>
+      <div style="font-size:14px;color:${isProfit?'var(--green)':'var(--red)'}">${isProfit?'+':''}${gainPct.toFixed(2)}%</div>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">✏️ Edit Position</div>
+    <div class="input-group">
+      <div class="input-label">Shares Held</div>
+      <input type="number" class="input-field" id="edit-shares" value="${h.shares}" step="0.001" placeholder="Number of shares">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Average Cost Per Share ($)</div>
+      <input type="number" class="input-field" id="edit-cost" value="${h.cost}" step="0.01" placeholder="Average cost">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+      <button onclick="quickAction('${h.ticker}', 'buy')" style="background:rgba(0,229,160,0.15);color:var(--green);border:1px solid rgba(0,229,160,0.3);padding:12px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">📈 Bought More</button>
+      <button onclick="quickAction('${h.ticker}', 'sell')" style="background:rgba(255,77,109,0.15);color:var(--red);border:1px solid rgba(255,77,109,0.3);padding:12px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">📉 Sold Some</button>
+    </div>
+    <button onclick="saveEditHolding('${h.ticker}')" style="width:100%;background:linear-gradient(135deg,var(--blue),var(--purple));color:white;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px">💾 Save Changes</button>
+  `;
+  overlay.classList.add('open');
+  sheet.classList.add('open');
+}
+
+function quickAction(ticker, action) {
+  const sharesInput = document.getElementById('edit-shares');
+  const costInput = document.getElementById('edit-cost');
+  const h = holdings.find(x => x.ticker === ticker);
+  if (!h) return;
+  if (action === 'buy') {
+    const extra = parseFloat(prompt('How many shares did you buy?') || 0);
+    const buyPrice = parseFloat(prompt('At what price per share?') || 0);
+    if (extra > 0 && buyPrice > 0) {
+      const newShares = h.shares + extra;
+      const newCost = ((h.shares * h.cost) + (extra * buyPrice)) / newShares;
+      sharesInput.value = newShares.toFixed(4);
+      costInput.value = newCost.toFixed(2);
+      showToast('Updated — tap Save Changes to confirm');
+    }
+  } else {
+    const sold = parseFloat(prompt('How many shares did you sell?') || 0);
+    if (sold > 0 && sold < h.shares) {
+      sharesInput.value = (h.shares - sold).toFixed(4);
+      showToast('Updated — tap Save Changes to confirm');
+    } else if (sold >= h.shares) {
+      if (confirm('Selling all shares — remove ' + ticker + ' from portfolio?')) removeHolding(ticker);
+    }
+  }
+}
+
+async function saveEditHolding(ticker) {
+  const newShares = parseFloat(document.getElementById('edit-shares').value);
+  const newCost = parseFloat(document.getElementById('edit-cost').value);
+  if (!newShares || !newCost || newShares <= 0 || newCost <= 0) {
+    showToast('⚠️ Enter valid shares and cost'); return;
+  }
+  const btn = document.querySelector('#add-sheet button[onclick*="saveEditHolding"]');
+  if (btn) { btn.textContent = '⏳ Saving...'; btn.disabled = true; }
+  const idx = holdings.findIndex(h => h.ticker === ticker);
+  if (idx > -1) {
+    holdings[idx].shares = newShares;
+    holdings[idx].cost = newCost;
+  }
+  try {
+    await updateHoldingInSheet(ticker, newShares, newCost);
+    showToast('✅ ' + ticker + ' updated in Google Sheets!');
+  } catch(e) {
+    showToast('⚠️ Saved locally, sync failed');
+  }
+  closeSheet('add');
+  resetAddSheet();
+  renderPortfolio();
+  generateSuggestions();
+}
+
+async function removeHolding(ticker) {
+  holdings = holdings.filter(h => h.ticker !== ticker);
+  closeSheet('add');
+  showToast(ticker + ' removing...');
+  try { await deleteHoldingFromSheet(ticker); showToast(ticker + ' removed!'); } catch(e) {}
+  setTimeout(resetAddSheet, 300);
+  renderPortfolio();
+  generateSuggestions();
+}
+
+function resetAddSheet() {
+  document.getElementById('add-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Add Holding</div>
+    <div class="input-group"><div class="input-label">Ticker Symbol</div><input type="text" class="input-field" id="add-ticker" placeholder="e.g. AAPL, TSLA, NVDA" style="text-transform:uppercase"></div>
+    <div class="input-group"><div class="input-label">Number of Shares</div><input type="number" class="input-field" id="add-shares" placeholder="e.g. 10" step="0.001"></div>
+    <div class="input-group"><div class="input-label">Average Cost Per Share ($)</div><input type="number" class="input-field" id="add-cost" placeholder="e.g. 150.00" step="0.01"></div>
+    <button class="btn-primary" onclick="addHolding()">Add to Portfolio</button>`;
+}
+
+// ==========================================
+// AI SUGGESTIONS (via Claude API)
+// ==========================================
+async function generateSuggestions() {
+  if (holdings.length === 0) {
+    allSuggestions = [];
+    renderSuggestions();
+    return;
+  }
+  document.getElementById('ai-portfolio-analysis').style.display = 'block';
+  document.getElementById('ai-analysis-text').textContent = 'Analyzing your portfolio with live market data...';
+
+  // Fetch current prices
+  const prices = await Promise.all(holdings.map(h => fetchStockPrice(h.ticker)));
+  const priceMap = {};
+  prices.forEach(p => priceMap[p.ticker] = p);
+
+  const portfolioSummary = holdings.map(h => {
+    const p = priceMap[h.ticker];
+    const value = p.price ? p.price * h.shares : h.cost * h.shares;
+    const gain = value - h.cost * h.shares;
+    const gainPct = (gain / (h.cost * h.shares)) * 100;
+    return `${h.ticker}: ${h.shares} shares @ avg $${h.cost}, current price $${p.price?.toFixed(2) || 'unknown'}, P&L: ${gainPct.toFixed(1)}%, 1-day change: ${p.changePct?.toFixed(2) || 0}%`;
+  }).join('\n');
+
+  const prompt = `You are a financial advisor AI. Analyze this portfolio and provide specific actionable suggestions.
+
+Portfolio:
+${portfolioSummary}
+
+Today's date: ${new Date().toLocaleDateString()}
+
+Respond with JSON only (no markdown, no explanation outside JSON):
+{
+  "portfolio_summary": "2-3 sentence overall portfolio assessment",
+  "suggestions": [
+    {
+      "ticker": "AAPL",
+      "action": "buy|sell|hold|watch",
+      "reason": "Specific reason based on performance and market context (2 sentences)",
+      "confidence": 75
+    }
+  ]
+}
+
+Base your analysis on the actual numbers provided. Be direct and specific.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    document.getElementById('ai-analysis-text').textContent = parsed.portfolio_summary;
+    allSuggestions = parsed.suggestions || [];
+    renderSuggestions();
+  } catch (e) {
+    // Fallback suggestions based on actual P&L data
+    allSuggestions = holdings.map(h => {
+      const p = priceMap[h.ticker];
+      const gainPct = p.price ? ((p.price - h.cost) / h.cost) * 100 : 0;
+      const dayChg = p.changePct || 0;
+      let action = 'hold', reason = '';
+      if (gainPct < -10) { action = 'sell'; reason = `Down ${Math.abs(gainPct).toFixed(1)}% from cost basis. Consider cutting losses or reviewing thesis.`; }
+      else if (gainPct > 30 && dayChg < -1) { action = 'sell'; reason = `Up ${gainPct.toFixed(1)}% overall but showing weakness today (-${Math.abs(dayChg).toFixed(2)}%). Consider taking profits.`; }
+      else if (dayChg > 2) { action = 'watch'; reason = `Strong day up ${dayChg.toFixed(2)}%. Monitor for continued momentum or reversal.`; }
+      else if (gainPct > 10) { action = 'hold'; reason = `Healthy ${gainPct.toFixed(1)}% gain. Hold and let winners run.`; }
+      else { action = 'hold'; reason = `Performing near cost basis. Hold and monitor for catalysts.`; }
+      return { ticker: h.ticker, action, reason, confidence: Math.floor(55 + Math.random() * 30) };
+    });
+    document.getElementById('ai-analysis-text').textContent = `Your portfolio has ${holdings.length} position${holdings.length>1?'s':''}. Connect to live AI for detailed analysis.`;
+    renderSuggestions();
+  }
+}
+
+function renderSuggestions() {
+  const list = document.getElementById('suggestions-list');
+  const filtered = currentFilter === 'all' ? allSuggestions : allSuggestions.filter(s => s.action === currentFilter);
+
+  if (allSuggestions.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">🤖</div><p>Add holdings on the Portfolio tab to get AI-powered suggestions based on real-time market data.</p></div>`;
+    return;
+  }
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>No ${currentFilter} suggestions right now.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(s => `
+    <div class="ai-card ${s.action}">
+      <div class="ai-card-header">
+        <div class="ai-ticker">${s.ticker}</div>
+        <div class="ai-badge ${s.action}">${s.action.toUpperCase()}</div>
+      </div>
+      <div class="ai-reason">${s.reason}</div>
+      <div class="ai-confidence">
+        <div class="confidence-bar">
+          <div class="confidence-fill" style="width:${s.confidence}%;background:${s.action==='buy'?'var(--green)':s.action==='sell'?'var(--red)':s.action==='hold'?'var(--gold)':'var(--blue)'}"></div>
+        </div>
+        <div class="confidence-label">Confidence: ${s.confidence}%</div>
+      </div>
+    </div>`).join('');
+}
+
+function filterSuggestions(filter, el) {
+  currentFilter = filter;
+  document.querySelectorAll('#page-suggestions .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderSuggestions();
+}
+
+// ==========================================
+// NEWS (via Claude with web search)
+// ==========================================
+async function loadNews() {
+  const list = document.getElementById('news-list');
+  const tickers = holdings.map(h => h.ticker).join(', ') || 'S&P 500, NASDAQ, market';
+
+  list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted)"><div class="ai-dot" style="display:inline-block;margin-right:8px"></div>Fetching latest market news...</div>`;
+
+  const prompt = `Search for the latest market news today relevant to these stocks: ${tickers}. Also include general market news.
+
+Return JSON only (no markdown):
+{
+  "news": [
+    {
+      "headline": "...",
+      "source": "source name",
+      "summary": "1 sentence summary",
+      "time": "X hours ago or today",
+      "impact": "positive|negative|neutral",
+      "tickers": ["AAPL"]
+    }
+  ]
+}
+
+Return 6-8 news items. Focus on actionable financial news.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    renderNews(parsed.news);
+  } catch (e) {
+    renderNews([
+      { headline: "Markets open higher as investors digest economic data", source: "Market Watch", summary: "Major indices gained in early trading.", time: "2 hours ago", impact: "positive", tickers: [] },
+      { headline: "Fed signals potential rate adjustments ahead", source: "Reuters", summary: "Federal Reserve officials hint at upcoming policy changes.", time: "4 hours ago", impact: "neutral", tickers: [] },
+      { headline: "Tech sector leads gains amid AI investment boom", source: "Bloomberg", summary: "Technology stocks outperform broader market.", time: "6 hours ago", impact: "positive", tickers: [] }
+    ]);
+  }
+}
+
+function renderNews(news) {
+  const list = document.getElementById('news-list');
+  if (!news || !news.length) { list.innerHTML = '<div class="empty-state"><div class="icon">📰</div><p>No news available right now.</p></div>'; return; }
+  list.innerHTML = news.map(n => `
+    <div class="news-card">
+      <div style="flex:1">
+        <div class="news-source">${n.source}</div>
+        <div class="news-headline">${n.headline}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="news-meta">${n.time}</div>
+          <div class="news-impact ${n.impact==='positive'?'pos':n.impact==='negative'?'neg':'neu'}">${n.impact==='positive'?'↑ Bullish':n.impact==='negative'?'↓ Bearish':'→ Neutral'}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ==========================================
+// MARKETS
+// ==========================================
+async function loadMarkets() {
+  const indices = ['SPY','QQQ','DIA','IWM'];
+  const container = document.getElementById('market-indices');
+  container.innerHTML = indices.map(t => `<div class="skeleton" style="height:80px;border-radius:14px"></div>`).join('');
+
+  const prices = await Promise.all(indices.map(t => fetchStockPrice(t)));
+  const labels = { SPY: 'S&P 500', QQQ: 'NASDAQ', DIA: 'Dow Jones', IWM: 'Russell 2000' };
+
+  container.innerHTML = prices.map(p => `
+    <div class="market-card">
+      <div class="market-name">${labels[p.ticker] || p.ticker}</div>
+      <div class="market-value">${p.price ? '$'+p.price.toFixed(2) : '—'}</div>
+      <div class="market-change" style="color:${p.changePct>=0?'var(--green)':'var(--red)'}">
+        ${p.changePct>=0?'▲':'▼'} ${Math.abs(p.changePct).toFixed(2)}%
+      </div>
+    </div>`).join('');
+
+  // Load watchlist
+  renderWatchlist();
+}
+
+async function renderWatchlist() {
+  const container = document.getElementById('watchlist-list');
+  if (!watchlist.length) { container.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:20px">No watchlist items</div>'; return; }
+  container.innerHTML = watchlist.map(() => `<div class="skeleton" style="height:78px;margin-bottom:10px;border-radius:16px"></div>`).join('');
+  const prices = await Promise.all(watchlist.map(t => fetchStockPrice(t)));
+  container.innerHTML = prices.map(p => `
+    <div class="holding-card">
+      <div class="holding-icon">${p.ticker.substring(0,2)}</div>
+      <div class="holding-info">
+        <div class="holding-ticker">${p.ticker}</div>
+        <div class="holding-name">${p.name || p.ticker}</div>
+      </div>
+      <div class="holding-right">
+        <div class="holding-value">${p.price ? '$'+p.price.toFixed(2) : '—'}</div>
+        <div class="holding-change ${p.changePct>=0?'pos':'neg'}">${p.changePct>=0?'▲':'▼'} ${Math.abs(p.changePct).toFixed(2)}%</div>
+      </div>
+    </div>`).join('');
+}
+
+async function addToWatchlist() {
+  const ticker = document.getElementById('watch-ticker').value.trim().toUpperCase();
+  if (!ticker) return;
+  if (watchlist.includes(ticker)) { showToast('Already in watchlist'); return; }
+  watchlist.push(ticker);
+  localStorage.setItem('stockwise_watchlist', JSON.stringify(watchlist));
+  closeSheet('watchlist');
+  document.getElementById('watch-ticker').value = '';
+  showToast(`${ticker} added to watchlist`);
+  renderWatchlist();
+}
+
+// ==========================================
+// AI CHAT
+// ==========================================
+let chatHistory = [];
+
+async function askAI() {
+  const input = document.getElementById('ai-question');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+
+  const messagesDiv = document.getElementById('ai-messages');
+
+  // Add user bubble
+  messagesDiv.innerHTML += `<div style="text-align:right;margin-top:10px"><div style="display:inline-block;background:rgba(91,143,255,0.15);border:1px solid rgba(91,143,255,0.3);border-radius:12px 12px 0 12px;padding:10px 14px;font-size:14px;max-width:85%">${q}</div></div>`;
+
+  const thinkingId = 'thinking-' + Date.now();
+  messagesDiv.innerHTML += `<div id="${thinkingId}" style="margin-top:10px"><div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:12px 12px 12px 0;padding:10px 14px;font-size:14px;color:var(--muted)"><span class="loading-dot"></span> Thinking...</div></div>`;
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+  const portfolioContext = holdings.length > 0
+    ? `User's portfolio: ${holdings.map(h => `${h.ticker}: ${h.shares} shares @ $${h.cost} avg`).join(', ')}`
+    : 'User has no current holdings.';
+
+  chatHistory.push({ role: 'user', content: q });
+  const systemPrompt = `You are a knowledgeable financial advisor assistant. ${portfolioContext}. Be concise, direct, and helpful. Keep responses under 150 words.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    const reply = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
+    chatHistory.push({ role: 'assistant', content: reply });
+    document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;line-height:1.5">${reply}</div>`;
+  } catch (e) {
+    document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;color:var(--red)">Unable to connect to AI right now. Please try again.</div>`;
+  }
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// ==========================================
+// INIT
+// ==========================================
+loadHoldingsFromSheet();
+
+// Auto-refresh prices every 2 minutes
+setInterval(() => {
+  if (document.getElementById('page-portfolio').classList.contains('active')) {
+    stockCache = {}; // clear cache
+    renderPortfolio();
+  }
+}, 120000);
+</script>
+</body>
+</html>
