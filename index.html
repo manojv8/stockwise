@@ -916,12 +916,12 @@
     <div class="header-top">
       <div class="app-name">AI <span>Insights</span></div>
     </div>
-    <div class="tabs" id="filter-tabs-container">
-      <div class="tab filter-tab active" id="ftab-all" onclick="filterSuggestions('all')">All</div>
-      <div class="tab filter-tab" id="ftab-buy" onclick="filterSuggestions('buy')">📈 Buy</div>
-      <div class="tab filter-tab" id="ftab-sell" onclick="filterSuggestions('sell')">📉 Sell</div>
-      <div class="tab filter-tab" id="ftab-hold" onclick="filterSuggestions('hold')">⏸ Hold</div>
-      <div class="tab filter-tab" id="ftab-watch" onclick="filterSuggestions('watch')">👁 Watch</div>
+    <div id="filter-tabs-container" style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none">
+      <button id="ftab-all"   onclick="filterSuggestions('all')"   style="padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid rgba(91,143,255,0.3);background:rgba(91,143,255,0.15);color:var(--blue);font-family:'DM Sans',sans-serif">All</button>
+      <button id="ftab-buy"   onclick="filterSuggestions('buy')"   style="padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif">📈 Buy</button>
+      <button id="ftab-sell"  onclick="filterSuggestions('sell')"  style="padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif">📉 Sell</button>
+      <button id="ftab-hold"  onclick="filterSuggestions('hold')"  style="padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif">⏸ Hold</button>
+      <button id="ftab-watch" onclick="filterSuggestions('watch')" style="padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif">👁 Watch</button>
     </div>
   </div>
   <div class="content">
@@ -1824,61 +1824,70 @@ function renderSuggestions() {
   const list = document.getElementById('suggestions-list');
   if (!list) return;
 
-  if (allSuggestions.length === 0) {
+  if (!allSuggestions || allSuggestions.length === 0) {
     list.innerHTML = '<div class="empty-state"><div class="icon">🤖</div><p>Add holdings on the Portfolio tab to get AI-powered suggestions.</p></div>';
     return;
   }
 
-  // Always normalize actions
-  const normalized = allSuggestions.map(s => ({
-    ...s,
-    action: (s.action || 'hold').toLowerCase().trim().replace(/[^a-z]/g, '')
-  }));
+  // Normalize every action to lowercase, letters only
+  const normalized = allSuggestions.map(s => {
+    const a = String(s.action || 'hold').toLowerCase().trim().replace(/[^a-z]/g, '');
+    const validActions = ['buy','sell','hold','watch'];
+    return { ...s, action: validActions.includes(a) ? a : 'hold' };
+  });
 
   const filtered = currentFilter === 'all'
     ? normalized
     : normalized.filter(s => s.action === currentFilter);
 
   if (filtered.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>No ' + currentFilter + ' suggestions right now.</p></div>';
+    list.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>No <strong>' + currentFilter + '</strong> suggestions right now.</p></div>';
     return;
   }
 
+  const colorMap = { buy:'var(--green)', sell:'var(--red)', hold:'var(--gold)', watch:'var(--blue)' };
   list.innerHTML = filtered.map(s => {
-    const colorMap = { buy: 'var(--green)', sell: 'var(--red)', hold: 'var(--gold)', watch: 'var(--blue)' };
     const color = colorMap[s.action] || 'var(--blue)';
-    return '<div class="ai-card ' + s.action + '">' +
-      '<div class="ai-card-header">' +
-        '<div class="ai-ticker">' + s.ticker + '</div>' +
-        '<div class="ai-badge ' + s.action + '">' + s.action.toUpperCase() + '</div>' +
-      '</div>' +
-      '<div class="ai-reason">' + s.reason + '</div>' +
-      '<div class="ai-confidence">' +
-        '<div class="confidence-bar">' +
-          '<div class="confidence-fill" style="width:' + s.confidence + '%;background:' + color + '"></div>' +
-        '</div>' +
-        '<div class="confidence-label">Confidence: ' + s.confidence + '%</div>' +
-      '</div>' +
-    '</div>';
+    return [
+      '<div class="ai-card ' + s.action + '">',
+        '<div class="ai-card-header">',
+          '<div class="ai-ticker">' + (s.ticker||'') + '</div>',
+          '<div class="ai-badge ' + s.action + '">' + s.action.toUpperCase() + '</div>',
+        '</div>',
+        '<div class="ai-reason">' + (s.reason||'') + '</div>',
+        '<div class="ai-confidence">',
+          '<div class="confidence-bar">',
+            '<div class="confidence-fill" style="width:' + (s.confidence||50) + '%;background:' + color + '"></div>',
+          '</div>',
+          '<div class="confidence-label">Confidence: ' + (s.confidence||50) + '%</div>',
+        '</div>',
+      '</div>'
+    ].join('');
   }).join('');
 }
 
+// Completely standalone filter function - no class manipulation, pure inline styles
 function filterSuggestions(filter) {
   currentFilter = filter;
-  // Update tab active states using IDs
-  ['all','buy','sell','hold','watch'].forEach(f => {
-    const tab = document.getElementById('ftab-' + f);
-    if (tab) tab.classList.toggle('active', f === filter);
+  const filters = ['all','buy','sell','hold','watch'];
+  filters.forEach(function(f) {
+    const btn = document.getElementById('ftab-' + f);
+    if (!btn) return;
+    if (f === filter) {
+      btn.style.background = 'rgba(91,143,255,0.15)';
+      btn.style.color = 'var(--blue)';
+      btn.style.borderColor = 'rgba(91,143,255,0.3)';
+    } else {
+      btn.style.background = 'none';
+      btn.style.color = 'var(--muted)';
+      btn.style.borderColor = 'var(--border)';
+    }
   });
   renderSuggestions();
 }
 
 function resetFilterTabs() {
-  currentFilter = 'all';
-  ['all','buy','sell','hold','watch'].forEach(f => {
-    const tab = document.getElementById('ftab-' + f);
-    if (tab) tab.classList.toggle('active', f === 'all');
-  });
+  filterSuggestions('all');
 }
 
 // ==========================================
