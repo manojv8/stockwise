@@ -9,6 +9,7 @@
 <title>Stockwise — Portfolio AI</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 
   /* ==================== AUTH SCREEN ==================== */
@@ -708,6 +709,75 @@
   .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
   .empty-state p { font-size: 14px; line-height: 1.5; }
 
+
+  /* ==================== DASHBOARD ==================== */
+  .chart-container {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .chart-title {
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+  .chart-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px; letter-spacing: -0.5px; margin-bottom: 2px;
+  }
+  .chart-sub { font-size: 13px; margin-bottom: 16px; }
+  .range-tabs {
+    display: flex; gap: 6px; margin-bottom: 14px;
+  }
+  .range-tab {
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border); background: none;
+    color: var(--muted); transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+  }
+  .range-tab.active {
+    background: rgba(91,143,255,0.15); color: var(--blue);
+    border-color: rgba(91,143,255,0.3);
+  }
+  canvas { width: 100% !important; }
+
+  .dash-stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
+  }
+  .dash-stat {
+    background: var(--surface); border-radius: 16px; padding: 16px;
+    border: 1px solid var(--border);
+  }
+  .dash-stat-icon { font-size: 20px; margin-bottom: 8px; }
+  .dash-stat-label { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .dash-stat-value { font-size: 18px; font-weight: 700; }
+  .dash-stat-change { font-size: 12px; margin-top: 2px; }
+
+  .allocation-bar {
+    height: 8px; border-radius: 4px; overflow: hidden;
+    display: flex; margin-bottom: 12px; gap: 2px;
+  }
+  .allocation-segment { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+
+  .allocation-legend { display: flex; flex-direction: column; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-name { font-size: 13px; flex: 1; }
+  .legend-pct { font-size: 13px; font-weight: 700; color: var(--muted); }
+  .legend-val { font-size: 13px; font-weight: 600; }
+
+  .perf-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .perf-row:last-child { border-bottom: none; }
+  .perf-ticker { font-weight: 700; font-size: 14px; }
+  .perf-name { font-size: 11px; color: var(--muted); }
+  .perf-bar-wrap { flex: 1; margin: 0 12px; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .perf-bar-fill { height: 100%; border-radius: 2px; }
+  .perf-pct { font-size: 13px; font-weight: 700; min-width: 52px; text-align: right; }
+
 </style>
 </head>
 <body class="theme-midnight">
@@ -769,10 +839,6 @@
 
 <!-- MAIN APP SCREEN -->
 <div id="app-screen" class="hidden">
-
-</head>
-<body>
-
 
 <!-- PORTFOLIO PAGE -->
 <div id="page-portfolio" class="page active">
@@ -896,11 +962,85 @@
   </div>
 </div>
 
+
+<!-- DASHBOARD PAGE -->
+<div id="page-dashboard" class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">My <span>Dashboard</span></div>
+      <div id="dash-last-updated" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- Main Chart -->
+    <div class="chart-container">
+      <div class="chart-title">Portfolio Value</div>
+      <div class="chart-value" id="dash-total-value">$0.00</div>
+      <div class="chart-sub" id="dash-total-change" style="color:var(--green)">Loading...</div>
+      <div class="range-tabs">
+        <button class="range-tab active" onclick="switchChartRange('1W',this)">1W</button>
+        <button class="range-tab" onclick="switchChartRange('1M',this)">1M</button>
+        <button class="range-tab" onclick="switchChartRange('3M',this)">3M</button>
+        <button class="range-tab" onclick="switchChartRange('1Y',this)">1Y</button>
+        <button class="range-tab" onclick="switchChartRange('3Y',this)">3Y</button>
+        <button class="range-tab" onclick="switchChartRange('5Y',this)">5Y</button>
+      </div>
+      <canvas id="portfolio-chart" height="180"></canvas>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="dash-stats-grid">
+      <div class="dash-stat">
+        <div class="dash-stat-icon">💰</div>
+        <div class="dash-stat-label">Total Invested</div>
+        <div class="dash-stat-value" id="dash-invested">—</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-icon">📈</div>
+        <div class="dash-stat-label">Total Gain</div>
+        <div class="dash-stat-value" id="dash-gain">—</div>
+        <div class="dash-stat-change" id="dash-gain-pct">—</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-icon">🏆</div>
+        <div class="dash-stat-label">Best Performer</div>
+        <div class="dash-stat-value" id="dash-best">—</div>
+        <div class="dash-stat-change" id="dash-best-pct" style="color:var(--green)">—</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-icon">📉</div>
+        <div class="dash-stat-label">Worst Performer</div>
+        <div class="dash-stat-value" id="dash-worst">—</div>
+        <div class="dash-stat-change" id="dash-worst-pct" style="color:var(--red)">—</div>
+      </div>
+    </div>
+
+    <!-- Portfolio Allocation -->
+    <div class="chart-container" id="dash-allocation-wrap" style="display:none">
+      <div class="chart-title">Portfolio Allocation</div>
+      <div class="allocation-bar" id="dash-alloc-bar"></div>
+      <div class="allocation-legend" id="dash-alloc-legend"></div>
+    </div>
+
+    <!-- Performance Table -->
+    <div class="chart-container" id="dash-perf-wrap" style="display:none">
+      <div class="chart-title">Performance by Stock</div>
+      <div id="dash-perf-list"></div>
+    </div>
+
+  </div>
+</div>
+
 <!-- Bottom Navigation -->
 <nav class="bottom-nav">
   <div class="nav-item active" onclick="switchPage('portfolio', this)">
     <div class="nav-icon">📈</div>
     <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="switchPage('dashboard', this)">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Dashboard</div>
   </div>
   <div class="nav-item" onclick="switchPage('suggestions', this)">
     <div class="nav-icon">🤖</div>
@@ -913,10 +1053,6 @@
   <div class="nav-item" onclick="switchPage('markets', this)">
     <div class="nav-icon">🌐</div>
     <div class="nav-label">Markets</div>
-  </div>
-  <div class="nav-item" onclick="openThemePicker()">
-    <div class="nav-icon">🎨</div>
-    <div class="nav-label">Theme</div>
   </div>
 </nav>
 
@@ -1037,8 +1173,6 @@
   </div>
   <p style="font-size:13px;color:var(--muted);text-align:center">Your theme is saved automatically</p>
 </div>
-
-<div class="toast" id="toast"></div>
 
 
 </div><!-- end app-screen -->
@@ -1248,6 +1382,7 @@ function switchPage(page, el) {
   if (page === 'news') loadNews();
   if (page === 'markets') loadMarkets();
   if (page === 'suggestions') renderSuggestions();
+  if (page === 'dashboard') loadDashboard();
 }
 
 // ==========================================
@@ -1928,6 +2063,329 @@ function loadSavedTheme() {
   document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
   const active = document.getElementById('swatch-' + saved);
   if (active) active.classList.add('active');
+}
+
+
+// ==========================================
+// DASHBOARD
+// ==========================================
+let portfolioChart = null;
+let currentChartRange = '1W';
+let dashPriceMap = {};
+
+async function loadDashboard() {
+  if (holdings.length === 0) {
+    document.getElementById('dash-total-value').textContent = '$0.00';
+    document.getElementById('dash-total-change').textContent = 'Add stocks to see your dashboard';
+    return;
+  }
+
+  document.getElementById('dash-last-updated').textContent = 'Loading...';
+
+  // Fetch all prices
+  const prices = await Promise.all(holdings.map(h => fetchStockPrice(h.ticker)));
+  prices.forEach(p => dashPriceMap[p.ticker] = p);
+
+  // Calculate totals
+  let totalValue = 0, totalCost = 0, totalDayChange = 0;
+  const stockPerf = [];
+
+  holdings.forEach(h => {
+    const p = dashPriceMap[h.ticker];
+    const value = p.price ? p.price * h.shares : h.cost * h.shares;
+    const cost = h.cost * h.shares;
+    const gain = value - cost;
+    const gainPct = (gain / cost) * 100;
+    const dayGain = (p.change || 0) * h.shares;
+    totalValue += value;
+    totalCost += cost;
+    totalDayChange += dayGain;
+    stockPerf.push({ ticker: h.ticker, name: p.name || h.ticker, value, gain, gainPct, dayGain });
+  });
+
+  const totalGain = totalValue - totalCost;
+  const totalGainPct = (totalGain / totalCost) * 100;
+  const dayPct = totalCost > 0 ? (totalDayChange / totalCost) * 100 : 0;
+
+  // Update header stats
+  document.getElementById('dash-total-value').textContent = '$' + totalValue.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const changeEl = document.getElementById('dash-total-change');
+  const isPos = totalGain >= 0;
+  changeEl.style.color = isPos ? 'var(--green)' : 'var(--red)';
+  changeEl.textContent = (isPos?'+':'-') + '$' + Math.abs(totalGain).toFixed(2) + ' (' + (isPos?'+':'') + totalGainPct.toFixed(2) + '%) all time  |  ' + (totalDayChange>=0?'+':'-') + '$' + Math.abs(totalDayChange).toFixed(2) + ' today';
+
+  document.getElementById('dash-last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+
+  // Quick stats
+  document.getElementById('dash-invested').textContent = '$' + totalCost.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const gainEl = document.getElementById('dash-gain');
+  gainEl.textContent = (totalGain>=0?'+':'-') + '$' + Math.abs(totalGain).toFixed(2);
+  gainEl.style.color = totalGain>=0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('dash-gain-pct').textContent = (totalGainPct>=0?'+':'') + totalGainPct.toFixed(2) + '%';
+  document.getElementById('dash-gain-pct').style.color = totalGainPct>=0 ? 'var(--green)' : 'var(--red)';
+
+  // Best & worst
+  const sorted = [...stockPerf].sort((a,b) => b.gainPct - a.gainPct);
+  if (sorted.length > 0) {
+    document.getElementById('dash-best').textContent = sorted[0].ticker;
+    document.getElementById('dash-best-pct').textContent = '+' + sorted[0].gainPct.toFixed(2) + '%';
+    const worst = sorted[sorted.length-1];
+    document.getElementById('dash-worst').textContent = worst.ticker;
+    document.getElementById('dash-worst-pct').textContent = (worst.gainPct>=0?'+':'') + worst.gainPct.toFixed(2) + '%';
+    document.getElementById('dash-worst-pct').style.color = worst.gainPct >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  // Allocation chart
+  renderAllocation(stockPerf, totalValue);
+
+  // Performance table
+  renderPerfTable(sorted);
+
+  // Main portfolio chart
+  await renderPortfolioChart(currentChartRange, totalValue, totalCost);
+}
+
+async function renderPortfolioChart(range, currentValue, totalCost) {
+  const canvas = document.getElementById('portfolio-chart');
+  if (!canvas) return;
+
+  // Generate historical data points by fetching historical prices
+  const { labels, values } = await buildChartData(range, currentValue, totalCost);
+
+  const isProfit = values[values.length-1] >= values[0];
+  const color = isProfit ? '#00e5a0' : '#ff4d6d';
+
+  if (portfolioChart) { portfolioChart.destroy(); portfolioChart = null; }
+
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+  gradient.addColorStop(0, isProfit ? 'rgba(0,229,160,0.3)' : 'rgba(255,77,109,0.3)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+  portfolioChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: color,
+        borderWidth: 2.5,
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: color,
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(20,20,30,0.95)',
+          titleColor: '#6b6b80',
+          bodyColor: '#f0f0f5',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: { color: '#6b6b80', font: { size: 10 }, maxTicksLimit: 6 }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+          border: { display: false },
+          ticks: {
+            color: '#6b6b80', font: { size: 10 },
+            callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0))
+          }
+        }
+      }
+    }
+  });
+}
+
+async function buildChartData(range, currentValue, totalCost) {
+  // Get number of data points and interval based on range
+  const configs = {
+    '1W': { days: 7, interval: '1d', points: 7 },
+    '1M': { days: 30, interval: '1d', points: 30 },
+    '3M': { days: 90, interval: '1wk', points: 13 },
+    '1Y': { days: 365, interval: '1wk', points: 52 },
+    '3Y': { days: 1095, interval: '1mo', points: 36 },
+    '5Y': { days: 1825, interval: '1mo', points: 60 },
+  };
+  const cfg = configs[range] || configs['1Y'];
+
+  try {
+    // Fetch historical data for each holding in parallel
+    const historicalData = await Promise.all(
+      holdings.map(h => fetchHistoricalPrices(h.ticker, cfg.days, cfg.interval))
+    );
+
+    // Find common date range
+    if (!historicalData[0] || historicalData[0].length === 0) throw new Error('No data');
+
+    const dates = historicalData[0].map(d => d.date);
+    const values = dates.map((date, i) => {
+      let portfolioVal = 0;
+      holdings.forEach((h, hi) => {
+        const hist = historicalData[hi];
+        const point = hist[i] || hist[hist.length-1];
+        if (point) portfolioVal += point.price * h.shares;
+      });
+      return portfolioVal;
+    });
+
+    // Format labels
+    const labels = dates.map(d => {
+      const date = new Date(d * 1000);
+      if (range === '1W' || range === '1M') return date.toLocaleDateString([],{month:'short',day:'numeric'});
+      if (range === '3M' || range === '1Y') return date.toLocaleDateString([],{month:'short',day:'numeric'});
+      return date.toLocaleDateString([],{month:'short',year:'2-digit'});
+    });
+
+    return { labels, values };
+  } catch(e) {
+    // Fallback: generate simulated data based on current value and cost
+    return generateSimulatedChart(range, currentValue, totalCost);
+  }
+}
+
+async function fetchHistoricalPrices(ticker, days, interval) {
+  try {
+    const end = Math.floor(Date.now() / 1000);
+    const start = end - (days * 86400);
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&period1=${start}&period2=${end}`;
+    const proxy = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const res = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    const result = data.chart.result[0];
+    const timestamps = result.timestamp;
+    const closes = result.indicators.quote[0].close;
+    return timestamps.map((t, i) => ({ date: t, price: closes[i] || closes[i-1] || 0 })).filter(d => d.price > 0);
+  } catch(e) {
+    // Try allorigins fallback
+    try {
+      const end = Math.floor(Date.now() / 1000);
+      const start = end - (days * 86400);
+      const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&period1=${start}&period2=${end}`;
+      const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+      const res = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
+      const raw = await res.json();
+      const data = JSON.parse(raw.contents);
+      const result = data.chart.result[0];
+      const timestamps = result.timestamp;
+      const closes = result.indicators.quote[0].close;
+      return timestamps.map((t, i) => ({ date: t, price: closes[i] || 0 })).filter(d => d.price > 0);
+    } catch(e2) {
+      return [];
+    }
+  }
+}
+
+function generateSimulatedChart(range, currentValue, totalCost) {
+  const points = { '1W':7,'1M':30,'3M':13,'1Y':52,'3Y':36,'5Y':60 }[range] || 52;
+  const labels = [];
+  const values = [];
+  const now = new Date();
+  const daysBack = { '1W':7,'1M':30,'3M':90,'1Y':365,'3Y':1095,'5Y':1825 }[range] || 365;
+
+  // Simulate growth from totalCost to currentValue with some noise
+  const startVal = totalCost * 0.75;
+  const endVal = currentValue;
+  const trend = (endVal - startVal) / points;
+
+  for (let i = 0; i < points; i++) {
+    const d = new Date(now - ((points - i) / points) * daysBack * 86400000);
+    if (range === '1W' || range === '1M') {
+      labels.push(d.toLocaleDateString([],{month:'short',day:'numeric'}));
+    } else if (range === '3M' || range === '1Y') {
+      labels.push(d.toLocaleDateString([],{month:'short',day:'numeric'}));
+    } else {
+      labels.push(d.toLocaleDateString([],{month:'short',year:'2-digit'}));
+    }
+    const noise = (Math.random() - 0.45) * startVal * 0.04;
+    values.push(Math.max(0, startVal + trend * i + noise));
+  }
+  values[values.length-1] = endVal;
+  return { labels, values };
+}
+
+async function switchChartRange(range, el) {
+  currentChartRange = range;
+  document.querySelectorAll('.range-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (portfolioChart) { portfolioChart.destroy(); portfolioChart = null; }
+  const canvas = document.getElementById('portfolio-chart');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  let totalValue = 0, totalCost = 0;
+  holdings.forEach(h => {
+    const p = dashPriceMap[h.ticker];
+    const value = p && p.price ? p.price * h.shares : h.cost * h.shares;
+    totalValue += value;
+    totalCost += h.cost * h.shares;
+  });
+
+  await renderPortfolioChart(range, totalValue, totalCost);
+}
+
+function renderAllocation(stockPerf, totalValue) {
+  if (stockPerf.length === 0) return;
+  const colors = ['#5b8fff','#a78bfa','#00e5a0','#f5c842','#ff4d6d','#38bdf8','#fb7185','#34d399','#f97316','#e879f9'];
+  const wrap = document.getElementById('dash-allocation-wrap');
+  wrap.style.display = 'block';
+
+  const bar = document.getElementById('dash-alloc-bar');
+  bar.innerHTML = stockPerf.map((s, i) => {
+    const pct = (s.value / totalValue) * 100;
+    return `<div class="allocation-segment" style="width:${pct}%;background:${colors[i%colors.length]}"></div>`;
+  }).join('');
+
+  const legend = document.getElementById('dash-alloc-legend');
+  legend.innerHTML = stockPerf.map((s, i) => {
+    const pct = (s.value / totalValue) * 100;
+    return `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${colors[i%colors.length]}"></div>
+        <div class="legend-name">${s.ticker}</div>
+        <div class="legend-val">$${s.value.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+        <div class="legend-pct">${pct.toFixed(1)}%</div>
+      </div>`;
+  }).join('');
+}
+
+function renderPerfTable(sorted) {
+  if (sorted.length === 0) return;
+  document.getElementById('dash-perf-wrap').style.display = 'block';
+  const maxAbs = Math.max(...sorted.map(s => Math.abs(s.gainPct)));
+  document.getElementById('dash-perf-list').innerHTML = sorted.map(s => `
+    <div class="perf-row">
+      <div>
+        <div class="perf-ticker">${s.ticker}</div>
+        <div class="perf-name">${s.name.substring(0,20)}</div>
+      </div>
+      <div class="perf-bar-wrap">
+        <div class="perf-bar-fill" style="width:${Math.abs(s.gainPct)/maxAbs*100}%;background:${s.gainPct>=0?'var(--green)':'var(--red)'}"></div>
+      </div>
+      <div class="perf-pct" style="color:${s.gainPct>=0?'var(--green)':'var(--red)'}">${s.gainPct>=0?'+':''}${s.gainPct.toFixed(2)}%</div>
+    </div>`).join('');
 }
 
 // ==========================================
