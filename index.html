@@ -166,6 +166,10 @@
     overflow-x: hidden;
   }
 
+  @media (min-width: 768px) {
+    body { max-width: 100%; margin: 0; }
+  }
+
 
 
   /* Header */
@@ -782,6 +786,259 @@
   .perf-bar-fill { height: 100%; border-radius: 2px; }
   .perf-pct { font-size: 13px; font-weight: 700; min-width: 52px; text-align: right; }
 
+
+/* ==================== DESKTOP LAYOUT ==================== */
+@media (min-width: 768px) {
+
+  body {
+    max-width: 100% !important;
+    overflow-x: hidden;
+  }
+
+  #auth-screen {
+    max-width: 460px;
+    border-radius: 24px;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    bottom: auto; right: auto;
+    height: auto;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    border: 1px solid var(--border);
+    padding: 40px;
+  }
+
+  /* Desktop shell */
+  #app-screen {
+    display: flex !important;
+    min-height: 100vh;
+  }
+
+  /* Left sidebar nav */
+  .bottom-nav {
+    position: fixed !important;
+    left: 0; top: 0; bottom: 0;
+    width: 220px;
+    max-width: 220px;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    padding: 24px 12px !important;
+    border-top: none !important;
+    border-right: 1px solid var(--border) !important;
+    background: var(--surface) !important;
+    transform: none !important;
+    gap: 4px;
+    z-index: 100;
+    overflow-y: auto;
+  }
+
+  /* Sidebar logo */
+  .bottom-nav::before {
+    content: 'Stockwise';
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    padding: 8px 12px 24px;
+    display: block;
+    width: 100%;
+    letter-spacing: -0.5px;
+  }
+
+  .nav-item {
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+    border-radius: 12px !important;
+    width: 100%;
+  }
+
+  .nav-item:hover { background: var(--surface2); }
+  .nav-item.active { background: rgba(91,143,255,0.12); }
+
+  .nav-icon {
+    font-size: 18px !important;
+    filter: none !important;
+    opacity: 0.6;
+  }
+  .nav-item.active .nav-icon { opacity: 1; }
+
+  .nav-label {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--muted) !important;
+    display: block !important;
+  }
+  .nav-item.active .nav-label { color: var(--accent) !important; }
+
+  /* Main content area */
+  #app-screen > .page,
+  #app-screen > div.page {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+  }
+
+  /* All pages shift right */
+  .page { margin-left: 220px; width: calc(100% - 220px); }
+
+  /* Headers become top bars */
+  .header {
+    padding: 20px 32px 16px !important;
+    top: 0;
+  }
+
+  .header-top {
+    margin-bottom: 8px;
+  }
+
+  .app-name { font-size: 26px !important; }
+
+  /* Content area */
+  .content {
+    padding: 0 32px 60px !important;
+    max-width: 1200px;
+  }
+
+  /* Portfolio page - 2 column layout */
+  #page-portfolio .content {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  #page-portfolio .portfolio-card {
+    grid-column: 1 / -1;
+  }
+
+  #page-portfolio .section-header:first-of-type {
+    grid-column: 1;
+  }
+
+  /* Dashboard - wider grid */
+  #page-dashboard .content {
+    max-width: 1100px;
+  }
+
+  .dash-stats-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+
+  /* Chart bigger on desktop */
+  .chart-wrapper {
+    height: 260px !important;
+  }
+
+  /* Holdings grid on desktop */
+  #holdings-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* AI insights - 2 col grid */
+  #suggestions-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* News - wider cards */
+  #news-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Markets - 4 col indices */
+  .market-overview {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+
+  #watchlist-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* AI chat button repositioned */
+  .ai-chat-btn {
+    bottom: 32px !important;
+    right: 32px !important;
+  }
+
+  /* Sheets become centered modals on desktop */
+  .sheet {
+    left: 50% !important;
+    transform: translateX(-50%) translateY(100%) !important;
+    max-width: 520px !important;
+    border-radius: 24px !important;
+    bottom: 0 !important;
+  }
+  .sheet.open {
+    transform: translateX(-50%) translateY(0) !important;
+    bottom: 0 !important;
+  }
+
+  /* User menu in sidebar bottom */
+  .user-menu {
+    position: fixed;
+    bottom: 24px;
+    left: 0;
+    width: 220px;
+    padding: 12px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #user-greeting {
+    font-size: 13px !important;
+    color: var(--text) !important;
+    font-weight: 500;
+  }
+
+  /* Portfolio card bigger on desktop */
+  .portfolio-card {
+    padding: 32px !important;
+  }
+
+  .portfolio-value {
+    font-size: 56px !important;
+  }
+
+  /* Allocation + perf side by side */
+  #dash-allocation-wrap,
+  #dash-perf-wrap,
+  #dash-dividend-wrap {
+    display: block;
+  }
+
+  .chart-container {
+    padding: 24px !important;
+  }
+
+  /* Hide mobile-only elements */
+  .mobile-only { display: none !important; }
+}
+
+@media (min-width: 1200px) {
+  .content { padding: 0 40px 60px !important; }
+
+  #page-portfolio .content {
+    grid-template-columns: 1fr 420px;
+  }
+
+  #holdings-list {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  #suggestions-list {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
 </style>
 </head>
 <body class="theme-midnight">
@@ -850,13 +1107,13 @@
     <div class="header-top">
       <div>
         <div class="app-name">Stock<span>wise</span></div>
-        <div id="user-greeting" style="font-size:12px;color:var(--muted);margin-top:1px"></div>
       </div>
       <div class="user-menu" onclick="openUserMenu()">
         <div class="user-avatar">
           <img id="user-avatar-img" style="display:none">
           <span id="user-avatar-text">?</span>
         </div>
+        <div id="user-greeting" style="font-size:12px;color:var(--muted);margin-top:1px;display:none" class="desktop-greeting"></div>
       </div>
     </div>
   </div>
