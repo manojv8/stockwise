@@ -22,7 +22,47 @@
     --blue: #5b8fff;
     --purple: #a78bfa;
     --radius: 20px;
+    --accent: #5b8fff;
+    --card-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   }
+
+  /* ---- THEMES ---- */
+  body.theme-midnight { --bg:#0a0a0f; --surface:#13131a; --surface2:#1c1c27; --border:rgba(255,255,255,0.07); --text:#f0f0f5; --muted:#6b6b80; --accent:#5b8fff; --card-gradient:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460); }
+  body.theme-forest   { --bg:#0b1a0e; --surface:#111f14; --surface2:#192b1d; --border:rgba(255,255,255,0.07); --text:#e8f5e9; --muted:#5a7a5e; --green:#4caf76; --blue:#43a868; --accent:#4caf76; --card-gradient:linear-gradient(135deg,#0b2e14,#0d3b1a,#0a4520); }
+  body.theme-sunset   { --bg:#12060e; --surface:#1c0d17; --surface2:#271220; --border:rgba(255,100,100,0.1); --text:#fff0f0; --muted:#7a5060; --blue:#ff6b6b; --purple:#ff9a5c; --accent:#ff6b6b; --card-gradient:linear-gradient(135deg,#2e0d1a,#3d1420,#4a1830); }
+  body.theme-ocean    { --bg:#030d1a; --surface:#071828; --surface2:#0d2438; --border:rgba(0,180,255,0.1); --text:#e8f4ff; --muted:#3a6080; --blue:#00bfff; --purple:#0099cc; --accent:#00bfff; --card-gradient:linear-gradient(135deg,#071828,#0a2540,#0d3560); }
+  body.theme-light    { --bg:#f5f5f7; --surface:#ffffff; --surface2:#f0f0f5; --border:rgba(0,0,0,0.08); --text:#1a1a2e; --muted:#8888a0; --green:#00a870; --red:#e03050; --gold:#c9a000; --blue:#4070ff; --purple:#7050e0; --accent:#4070ff; --card-gradient:linear-gradient(135deg,#4070ff,#5b40c0,#3050cc); }
+  body.theme-gold     { --bg:#0d0900; --surface:#1a1200; --surface2:#251b00; --border:rgba(245,200,66,0.1); --text:#fff8e0; --muted:#806040; --blue:#f5c842; --purple:#ffaa00; --accent:#f5c842; --card-gradient:linear-gradient(135deg,#2e1f00,#3d2a00,#4a3200); }
+  body.theme-aurora   { --bg:#05080f; --surface:#0d1220; --surface2:#141c30; --border:rgba(100,255,200,0.08); --text:#e8fff5; --muted:#4a6860; --green:#00ffcc; --blue:#00ccff; --purple:#cc00ff; --accent:#00ffcc; --card-gradient:linear-gradient(135deg,#0a1f2e,#0d2040,#0a1530); }
+
+  /* Theme-aware portfolio card */
+  .portfolio-card { background: var(--card-gradient) !important; }
+
+  /* Light theme specific overrides */
+  body.theme-light .status-bar { background: var(--bg); }
+  body.theme-light .bottom-nav { background: rgba(245,245,247,0.92); border-top:1px solid rgba(0,0,0,0.1); }
+  body.theme-light .nav-label { color: #888; }
+  body.theme-light .nav-item.active .nav-label { color: var(--accent); }
+  body.theme-light .holding-card { background: #fff; border-color: rgba(0,0,0,0.08); }
+  body.theme-light .ai-card { background: #fff; }
+  body.theme-light .news-card { background: #fff; }
+  body.theme-light .market-card { background: #fff; }
+  body.theme-light .sheet { background: #fff; }
+  body.theme-light .input-field { background: #f5f5f7; border-color: rgba(0,0,0,0.1); color: #1a1a2e; }
+  body.theme-light .stat { background: rgba(0,0,0,0.04); }
+  body.theme-light .tab { background: #f0f0f5; border-color: rgba(0,0,0,0.08); color: #666; }
+
+  /* Theme picker styles */
+  .theme-sheet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .theme-swatch {
+    border-radius: 14px; padding: 10px 6px; text-align: center; cursor: pointer;
+    border: 2px solid transparent; transition: all 0.2s; display: flex; flex-direction: column;
+    align-items: center; gap: 6px;
+  }
+  .theme-swatch.active { border-color: var(--accent); transform: scale(1.05); }
+  .theme-swatch:active { transform: scale(0.95); }
+  .theme-dot { width: 32px; height: 32px; border-radius: 50%; }
+  .theme-name { font-size: 11px; font-weight: 600; }
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -733,6 +773,10 @@
     <div class="nav-icon">🌐</div>
     <div class="nav-label">Markets</div>
   </div>
+  <div class="nav-item" onclick="openThemePicker()">
+    <div class="nav-icon">🎨</div>
+    <div class="nav-label">Theme</div>
+  </div>
 </nav>
 
 <!-- AI Chat Button -->
@@ -784,6 +828,44 @@
     <input type="text" class="input-field" id="watch-ticker" placeholder="e.g. GOOGL, META, AMZN" style="text-transform:uppercase">
   </div>
   <button class="btn-primary" onclick="addToWatchlist()">Add to Watchlist</button>
+</div>
+
+<!-- THEME PICKER SHEET -->
+<div class="sheet-overlay" id="theme-overlay" onclick="closeSheet('theme')"></div>
+<div class="sheet" id="theme-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Choose Theme 🎨</div>
+  <div class="theme-sheet-grid">
+    <div class="theme-swatch active" id="swatch-midnight" onclick="applyTheme('midnight')" style="background:#13131a">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#1a1a2e,#5b8fff)"></div>
+      <div class="theme-name" style="color:#f0f0f5">Midnight</div>
+    </div>
+    <div class="theme-swatch" id="swatch-forest" onclick="applyTheme('forest')" style="background:#111f14">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#0b2e14,#4caf76)"></div>
+      <div class="theme-name" style="color:#e8f5e9">Forest</div>
+    </div>
+    <div class="theme-swatch" id="swatch-sunset" onclick="applyTheme('sunset')" style="background:#1c0d17">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#2e0d1a,#ff6b6b)"></div>
+      <div class="theme-name" style="color:#fff0f0">Sunset</div>
+    </div>
+    <div class="theme-swatch" id="swatch-ocean" onclick="applyTheme('ocean')" style="background:#071828">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#071828,#00bfff)"></div>
+      <div class="theme-name" style="color:#e8f4ff">Ocean</div>
+    </div>
+    <div class="theme-swatch" id="swatch-light" onclick="applyTheme('light')" style="background:#f0f0f5;border:1px solid #ddd">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#4070ff,#7050e0)"></div>
+      <div class="theme-name" style="color:#1a1a2e">Light</div>
+    </div>
+    <div class="theme-swatch" id="swatch-gold" onclick="applyTheme('gold')" style="background:#1a1200">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#2e1f00,#f5c842)"></div>
+      <div class="theme-name" style="color:#fff8e0">Gold</div>
+    </div>
+    <div class="theme-swatch" id="swatch-aurora" onclick="applyTheme('aurora')" style="background:#0d1220">
+      <div class="theme-dot" style="background:linear-gradient(135deg,#0a1f2e,#00ffcc,#cc00ff)"></div>
+      <div class="theme-name" style="color:#e8fff5">Aurora</div>
+    </div>
+  </div>
+  <p style="font-size:13px;color:var(--muted);text-align:center">Your theme is saved automatically</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1492,8 +1574,40 @@ async function askAI() {
 }
 
 // ==========================================
+// THEMES
+// ==========================================
+const THEMES = ['midnight','forest','sunset','ocean','light','gold','aurora'];
+
+function applyTheme(theme) {
+  // Remove all theme classes
+  THEMES.forEach(t => document.body.classList.remove('theme-' + t));
+  document.body.classList.add('theme-' + theme);
+  localStorage.setItem('stockwise_theme', theme);
+  // Update swatches
+  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+  const active = document.getElementById('swatch-' + theme);
+  if (active) active.classList.add('active');
+  showToast('🎨 ' + theme.charAt(0).toUpperCase() + theme.slice(1) + ' theme applied!');
+}
+
+function openThemePicker() {
+  document.getElementById('theme-overlay').classList.add('open');
+  document.getElementById('theme-sheet').classList.add('open');
+}
+
+function loadSavedTheme() {
+  const saved = localStorage.getItem('stockwise_theme') || 'midnight';
+  THEMES.forEach(t => document.body.classList.remove('theme-' + t));
+  document.body.classList.add('theme-' + saved);
+  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+  const active = document.getElementById('swatch-' + saved);
+  if (active) active.classList.add('active');
+}
+
+// ==========================================
 // INIT
 // ==========================================
+loadSavedTheme();
 loadHoldingsFromSheet();
 
 // Auto-refresh prices every 2 minutes
