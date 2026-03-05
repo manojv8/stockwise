@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> 
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3369,6 +3369,7 @@ async function rhsLogin() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
       },
       body: JSON.stringify({ action: 'login', username, password })
@@ -3424,6 +3425,7 @@ async function rhsMFASubmit() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
       },
       body: JSON.stringify({ action: 'login', username, password, mfa_code })
@@ -3496,6 +3498,7 @@ async function rhsConfirmSync() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${accessToken || SUPABASE_KEY}`,
       },
       body: JSON.stringify({
