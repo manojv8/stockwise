@@ -168,7 +168,6 @@
 
 
 
-
   /* Header */
   .header {
     padding: 8px 20px 20px;
@@ -783,231 +782,514 @@
   .perf-bar-fill { height: 100%; border-radius: 2px; }
   .perf-pct { font-size: 13px; font-weight: 700; min-width: 52px; text-align: right; }
 
+</style>
+</head>
+<body class="theme-midnight">
 
 
-  /* Desktop shell */
-  #app-screen {
-    display: flex !important;
-    min-height: 100vh;
-  }
-
-  /* Left sidebar nav */
 
 
-  /* Sidebar logo */
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-logo">Stock<span>wise</span></div>
+  <div class="auth-tagline">AI-powered portfolio tracking</div>
+
+  <div style="width:100%">
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.88l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="auth-divider">or</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-success" id="auth-success"></div>
+
+    <!-- Sign In Form -->
+    <div id="form-signin" class="auth-form">
+      <div class="auth-input-group">
+        <input type="email" class="auth-input" id="signin-email" placeholder="Email address" autocomplete="email">
+      </div>
+      <div class="auth-input-group">
+        <input type="password" class="auth-input" id="signin-password" placeholder="Password" autocomplete="current-password">
+      </div>
+      <button class="btn-auth-primary" id="btn-signin" onclick="signInWithEmail()">Sign In</button>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="form-signup" class="auth-form" style="display:none">
+      <div class="auth-input-group">
+        <input type="text" class="auth-input" id="signup-name" placeholder="Your name">
+      </div>
+      <div class="auth-input-group">
+        <input type="email" class="auth-input" id="signup-email" placeholder="Email address" autocomplete="email">
+      </div>
+      <div class="auth-input-group">
+        <input type="password" class="auth-input" id="signup-password" placeholder="Password (min 6 chars)" autocomplete="new-password">
+      </div>
+      <button class="btn-auth-primary" id="btn-signup" onclick="signUpWithEmail()">Create Account</button>
+    </div>
+
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:16px">
+      Your portfolio data is private and secure 🔒
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP SCREEN -->
+<div id="app-screen" class="hidden">
+
+<!-- PORTFOLIO PAGE -->
+<div id="page-portfolio" class="page active">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="app-name">Stock<span>wise</span></div>
+        <div id="user-greeting" style="font-size:12px;color:var(--muted);margin-top:1px"></div>
+      </div>
+      <div class="user-menu" onclick="openUserMenu()">
+        <div class="user-avatar">
+          <img id="user-avatar-img" style="display:none">
+          <span id="user-avatar-text">?</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Portfolio Summary Card -->
+    <div class="portfolio-card">
+      <div class="portfolio-label">Total Portfolio Value</div>
+      <div class="portfolio-value" id="total-value">$0.00</div>
+      <div class="portfolio-change" id="total-change">
+        <span>▲</span> <span id="change-text">$0.00 (0.00%)</span>
+      </div>
+      <div class="portfolio-stats">
+        <div class="stat">
+          <div class="stat-label">Day's Gain</div>
+          <div class="stat-value" id="days-gain">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Total Return</div>
+          <div class="stat-value" id="total-return">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Holdings</div>
+          <div class="stat-value" id="holdings-count">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Last Updated</div>
+          <div class="stat-value" id="last-updated">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="ai-analysis-wrapper" id="ai-portfolio-analysis" style="display:none">
+      <div class="ai-label"><div class="ai-dot"></div> AI Portfolio Analysis</div>
+      <div class="ai-text" id="ai-analysis-text">Analyzing your portfolio...</div>
+    </div>
+
+    <!-- Holdings -->
+    <div class="section-header">
+      <div class="section-title">Holdings</div>
+      <button class="section-action" onclick="openAddSheet()">+ Add Stock</button>
+    </div>
+
+    <div id="holdings-list">
+      <div class="empty-state">
+        <div class="icon">📊</div>
+        <p>No holdings yet.<br>Add your first stock to get started.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUGGESTIONS PAGE -->
+<div id="page-suggestions" class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">AI <span>Insights</span></div>
+    </div>
+    <div id="filter-tabs-container" style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding:4px 2px 8px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+      <button id="ftab-all"   style="flex-shrink:0;display:block;padding:0;width:64px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid rgba(91,143,255,0.3);background:rgba(91,143,255,0.15);color:var(--blue);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('all')" onclick="filterSuggestions('all')">All</button>
+      <button id="ftab-buy"   style="flex-shrink:0;display:block;padding:0;width:64px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('buy')" onclick="filterSuggestions('buy')">Buy</button>
+      <button id="ftab-sell"  style="flex-shrink:0;display:block;padding:0;width:64px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('sell')" onclick="filterSuggestions('sell')">Sell</button>
+      <button id="ftab-hold"  style="flex-shrink:0;display:block;padding:0;width:64px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('hold')" onclick="filterSuggestions('hold')">Hold</button>
+      <button id="ftab-watch" style="flex-shrink:0;display:block;padding:0;width:72px;height:44px;border-radius:22px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;outline:none;" ontouchend="event.preventDefault();filterSuggestions('watch')" onclick="filterSuggestions('watch')">Watch</button>
+    </div>
+  </div>
+  <div class="content">
+    <div id="suggestions-list">
+      <div class="empty-state">
+        <div class="icon">🤖</div>
+        <p>Add holdings to get AI-powered suggestions based on real-time market news.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEWS PAGE -->
+<div id="page-news" class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">Market <span>News</span></div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="news-list">
+      <div class="skeleton" style="height:80px;margin-bottom:10px"></div>
+      <div class="skeleton" style="height:80px;margin-bottom:10px"></div>
+      <div class="skeleton" style="height:80px;margin-bottom:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MARKETS PAGE -->
+<div id="page-markets" class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">Markets <span>Overview</span></div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="market-overview" id="market-indices"></div>
+    <div class="section-header">
+      <div class="section-title">Watchlist</div>
+      <button class="section-action" onclick="openWatchlistSheet()">+ Add</button>
+    </div>
+    <div id="watchlist-list"></div>
+  </div>
+</div>
 
 
-  .nav-item {
-    flex-direction: row !important;
-    justify-content: flex-start !important;
-    gap: 12px !important;
-    padding: 12px 16px !important;
-    border-radius: 12px !important;
-    width: 100%;
-  }
+<!-- DASHBOARD PAGE -->
+<div id="page-dashboard" class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">My <span>Dashboard</span></div>
+      <div id="dash-last-updated" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+  </div>
+  <div class="content">
 
-  .nav-item:hover { background: var(--surface2); }
-  .nav-item.active { background: rgba(91,143,255,0.12); }
+    <!-- Main Chart -->
+    <div class="chart-container">
+      <div class="chart-title">Portfolio Value</div>
+      <div class="chart-value" id="dash-total-value">$0.00</div>
+      <div class="chart-sub" id="dash-total-change" style="color:var(--green)">Loading...</div>
+      <div class="range-tabs">
+        <button class="range-tab active" onclick="switchChartRange('1W',this)">1W</button>
+        <button class="range-tab" onclick="switchChartRange('1M',this)">1M</button>
+        <button class="range-tab" onclick="switchChartRange('3M',this)">3M</button>
+        <button class="range-tab" onclick="switchChartRange('1Y',this)">1Y</button>
+        <button class="range-tab" onclick="switchChartRange('3Y',this)">3Y</button>
+        <button class="range-tab" onclick="switchChartRange('5Y',this)">5Y</button>
+      </div>
+      <div class="chart-wrapper"><canvas id="portfolio-chart"></canvas></div>
+    </div>
 
-  .nav-icon {
-    font-size: 18px !important;
-    filter: none !important;
-    opacity: 0.6;
-  }
-  .nav-item.active .nav-icon { opacity: 1; }
+    <!-- Quick Stats -->
+    <div class="dash-stats-grid">
+      <div class="dash-stat">
+        <div class="dash-stat-icon">💰</div>
+        <div class="dash-stat-label">Total Invested</div>
+        <div class="dash-stat-value" id="dash-invested">—</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-icon">📈</div>
+        <div class="dash-stat-label">Total Gain</div>
+        <div class="dash-stat-value" id="dash-gain">—</div>
+        <div class="dash-stat-change" id="dash-gain-pct">—</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-icon">🏆</div>
+        <div class="dash-stat-label">Best Performer</div>
+        <div class="dash-stat-value" id="dash-best">—</div>
+        <div class="dash-stat-change" id="dash-best-pct" style="color:var(--green)">—</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-icon">📉</div>
+        <div class="dash-stat-label">Worst Performer</div>
+        <div class="dash-stat-value" id="dash-worst">—</div>
+        <div class="dash-stat-change" id="dash-worst-pct" style="color:var(--red)">—</div>
+      </div>
+    </div>
 
-  .nav-label {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: var(--muted) !important;
-    display: block !important;
-  }
-  .nav-item.active .nav-label { color: var(--accent) !important; }
+    <!-- Dividend Income Tile -->
+    <div class="chart-container" id="dash-dividend-wrap" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div class="chart-title">Estimated Dividend Income</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Based on current holdings & dividend yields</div>
+        </div>
+        <div style="font-size:28px">💵</div>
+      </div>
 
-  /* Main content area */
-  #app-screen > .page,
-  #app-screen > div.page {
-    margin-left: 220px;
-    width: calc(100% - 220px);
-  }
+      <!-- Monthly / Annual toggle -->
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button id="div-tab-monthly" onclick="switchDivView('monthly')" style="flex:1;padding:8px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(0,229,160,0.3);background:rgba(0,229,160,0.15);color:var(--green);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation">Monthly</button>
+        <button id="div-tab-annual" onclick="switchDivView('annual')" style="flex:1;padding:8px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation">Annual</button>
+      </div>
 
-  /* All pages shift right */
-  .page { margin-left: 220px; width: calc(100% - 220px); }
+      <!-- Big number -->
+      <div style="background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(91,143,255,0.1));border:1px solid rgba(0,229,160,0.2);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px" id="div-period-label">Monthly Income</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:36px;letter-spacing:-1px;color:var(--green)" id="div-total">$0.00</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="div-annual-equiv"></div>
+      </div>
 
-  /* Headers become top bars */
-  .header {
-    padding: 20px 32px 16px !important;
-    top: 0;
-  }
+      <!-- Per stock breakdown -->
+      <div id="div-breakdown"></div>
 
-  .header-top {
-    margin-bottom: 8px;
-  }
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px;line-height:1.5">
+        ⚠️ Estimates based on trailing 12-month dividend yield. Not financial advice.
+      </div>
+    </div>
 
-  .app-name { font-size: 26px !important; }
+    <!-- Portfolio Allocation -->
+    <div class="chart-container" id="dash-allocation-wrap" style="display:none">
+      <div class="chart-title">Portfolio Allocation</div>
+      <div class="allocation-bar" id="dash-alloc-bar"></div>
+      <div class="allocation-legend" id="dash-alloc-legend"></div>
+    </div>
 
-  /* Content area */
-  .content {
-    padding: 0 32px 60px !important;
-    max-width: 1200px;
-  }
+    <!-- Performance Table -->
+    <div class="chart-container" id="dash-perf-wrap" style="display:none">
+      <div class="chart-title">Performance by Stock</div>
+      <div id="dash-perf-list"></div>
+    </div>
 
-  /* Portfolio page - 2 column layout */
-  #page-portfolio .content {
-    display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 24px;
-    align-items: start;
-  }
+  </div>
+</div>
 
-  #page-portfolio .portfolio-card {
-    grid-column: 1 / -1;
-  }
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="switchPage('portfolio', this)">
+    <div class="nav-icon">📈</div>
+    <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="switchPage('dashboard', this)">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Dashboard</div>
+  </div>
+  <div class="nav-item" onclick="switchPage('suggestions', this)">
+    <div class="nav-icon">🤖</div>
+    <div class="nav-label">AI</div>
+  </div>
+  <div class="nav-item" onclick="switchPage('news', this)">
+    <div class="nav-icon">📰</div>
+    <div class="nav-label">News</div>
+  </div>
+  <div class="nav-item" onclick="switchPage('markets', this)">
+    <div class="nav-icon">🌐</div>
+    <div class="nav-label">Markets</div>
+  </div>
+  <div class="nav-item" onclick="openThemePicker()">
+    <div class="nav-icon">🎨</div>
+    <div class="nav-label">Theme</div>
+  </div>
+</nav>
 
-  #page-portfolio .section-header:first-of-type {
-    grid-column: 1;
-  }
+<!-- AI Chat Button -->
+<button class="ai-chat-btn" onclick="openAIChat()">✨</button>
 
-  /* Dashboard - wider grid */
-  #page-dashboard .content {
-    max-width: 1100px;
-  }
+<!-- ADD STOCK SHEET -->
+<div class="sheet-overlay" id="add-overlay" onclick="closeSheet('add')"></div>
+<div class="sheet" id="add-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Add Holding</div>
+  <div class="input-group">
+    <div class="input-label">Ticker Symbol</div>
+    <input type="text" class="input-field" id="add-ticker" placeholder="e.g. AAPL, TSLA, NVDA" style="text-transform:uppercase">
+  </div>
+  <div class="input-group">
+    <div class="input-label">Number of Shares</div>
+    <input type="number" class="input-field" id="add-shares" placeholder="e.g. 10" step="0.001">
+  </div>
+  <div class="input-group">
+    <div class="input-label">Average Cost Per Share ($)</div>
+    <input type="number" class="input-field" id="add-cost" placeholder="e.g. 150.00" step="0.01">
+  </div>
+  <button class="btn-primary" onclick="addHolding()">Add to Portfolio</button>
+</div>
 
-  .dash-stats-grid {
-    grid-template-columns: repeat(4, 1fr) !important;
-  }
+<!-- AI CHAT SHEET -->
+<div class="sheet-overlay" id="ai-overlay" onclick="closeSheet('ai')"></div>
+<div class="sheet" id="ai-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Ask AI Advisor ✨</div>
+  <div id="ai-messages" style="min-height:100px;margin-bottom:16px;max-height:300px;overflow-y:auto">
+    <div style="background:rgba(167,139,250,0.1);border-radius:12px 12px 12px 0;padding:12px;font-size:14px;line-height:1.5;border:1px solid rgba(167,139,250,0.2)">
+      Hi! I'm your AI portfolio advisor. Ask me anything about your stocks, market conditions, or investment strategies. 📊
+    </div>
+  </div>
+  <div class="input-group">
+    <input type="text" class="input-field" id="ai-question" placeholder="e.g. Should I buy more AAPL?" onkeydown="if(event.key==='Enter')askAI()">
+  </div>
+  <button class="btn-primary" onclick="askAI()">Ask AI →</button>
+</div>
 
-  /* Chart bigger on desktop */
-  .chart-wrapper {
-    height: 260px !important;
-  }
+<!-- WATCHLIST SHEET -->
+<div class="sheet-overlay" id="watchlist-overlay" onclick="closeSheet('watchlist')"></div>
+<div class="sheet" id="watchlist-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Add to Watchlist</div>
+  <div class="input-group">
+    <div class="input-label">Ticker Symbol</div>
+    <input type="text" class="input-field" id="watch-ticker" placeholder="e.g. GOOGL, META, AMZN" style="text-transform:uppercase">
+  </div>
+  <button class="btn-primary" onclick="addToWatchlist()">Add to Watchlist</button>
+</div>
 
-  /* Holdings grid on desktop */
-  #holdings-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
+<!-- USER MENU SHEET -->
+<div class="sheet-overlay" id="user-overlay" onclick="closeSheet('user')"></div>
+<div class="sheet" id="user-sheet">
+  <div class="sheet-handle"></div>
+  <div style="text-align:center;padding:10px 0 20px">
+    <div class="user-avatar" style="width:64px;height:64px;font-size:24px;margin:0 auto 12px">
+      <img id="user-menu-img" style="display:none;width:100%;height:100%;object-fit:cover">
+      <span id="user-menu-initials">?</span>
+    </div>
+    <div id="user-menu-name" style="font-size:18px;font-weight:700;margin-bottom:4px"></div>
+    <div id="user-menu-email" style="font-size:13px;color:var(--muted)"></div>
+  </div>
+  <div style="background:var(--surface2);border-radius:14px;overflow:hidden;margin-bottom:16px">
+    <div onclick="openThemePicker();closeSheet('user')" style="padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">🎨</span>
+      <span style="font-weight:500">Change Theme</span>
+      <span style="margin-left:auto;color:var(--muted)">›</span>
+    </div>
+    <div onclick="refreshPortfolio()" style="padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">🔄</span>
+      <span style="font-weight:500">Refresh Portfolio</span>
+      <span style="margin-left:auto;color:var(--muted)">›</span>
+    </div>
+  </div>
+  <button onclick="signOut();closeSheet('user')" style="width:100%;background:rgba(255,77,109,0.1);color:var(--red);border:1px solid rgba(255,77,109,0.2);border-radius:14px;padding:15px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
+    Sign Out
+  </button>
+</div>
 
-  /* AI insights - 2 col grid */
-  #suggestions-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
+<!-- THEME PICKER SHEET -->
 
-  /* News - wider cards */
-  #news-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
 
-  /* Markets - 4 col indices */
-  .market-overview {
-    grid-template-columns: repeat(4, 1fr) !important;
-  }
+</div><!-- end app-screen -->
 
-  #watchlist-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
+<div class="toast" id="toast"></div>
 
-  /* AI chat button repositioned */
-  .ai-chat-btn {
-    bottom: 32px !important;
-    right: 32px !important;
-  }
+<script>
 
-  /* Sheets become centered modals on desktop */
-  .sheet {
-    left: 50% !important;
-    transform: translateX(-50%) translateY(100%) !important;
-    max-width: 520px !important;
-    border-radius: 24px !important;
-    bottom: 0 !important;
-  }
-  .sheet.open {
-    transform: translateX(-50%) translateY(0) !important;
-    bottom: 0 !important;
-  }
+// ==========================================
+// ==========================================
+// SUPABASE CONFIG
+// ==========================================
+const SUPABASE_URL = 'https://grntqhcywbkakqtfozpi.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdybnRxaGN5d2JrYWtxdGZvenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTM0OTgsImV4cCI6MjA4ODIyOTQ5OH0.8EHk5hS2H01JvfHQYNKodOtsTmtYjF1QXCIIy7Z7dCU';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  /* User menu in sidebar bottom */
-  .user-menu {
-    position: fixed;
-    bottom: 24px;
-    left: 0;
-    width: 220px;
-    padding: 12px 24px;
-    border-top: 1px solid var(--border);
-    background: var(--surface);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+// ==========================================
+// APP STATE
+// ==========================================
+let currentUser = null;
+let holdings = [];
+let watchlist = JSON.parse(localStorage.getItem('stockwise_watchlist') || '["SPY","QQQ","BRK.B"]');
+let stockCache = {};
+let allSuggestions = [];
+let currentFilter = 'all';
 
-  #user-greeting {
-    font-size: 13px !important;
-    color: var(--text) !important;
-    font-weight: 500;
-  }
-
-  /* Portfolio card bigger on desktop */
-  .portfolio-card {
-    padding: 32px !important;
-  }
-
-  .portfolio-value {
-    font-size: 56px !important;
-  }
-
-  /* Allocation + perf side by side */
-  #dash-allocation-wrap,
-  #dash-perf-wrap,
-  #dash-dividend-wrap {
-    display: block;
-  }
-
-  .chart-container {
-    padding: 24px !important;
-  }
-
-  /* Hide mobile-only elements */
-  .mobile-only { display: none !important; }
+// ==========================================
+// AUTH FUNCTIONS
+// ==========================================
+function showAuthScreen() {
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('app-screen').classList.add('hidden');
 }
 
-@media (min-width: 1200px) {
-  .content { padding: 0 40px 60px !important; }
+function showAppScreen() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.remove('hidden');
+}
 
-  #page-portfolio .content {
-    grid-template-columns: 1fr 420px;
-  }
+function switchAuthTab(tab) {
+  document.getElementById('form-signin').style.display = tab === 'signin' ? 'block' : 'none';
+  document.getElementById('form-signup').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  clearAuthMessages();
+}
 
-  #holdings-list {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('auth-success').classList.remove('show');
+}
 
-  #suggestions-list {
-    grid-template-columns: 1fr 1fr 1fr;
+function showAuthSuccess(msg) {
+  const el = document.getElementById('auth-success');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('auth-error').classList.remove('show');
+}
+
+function clearAuthMessages() {
+  document.getElementById('auth-error').classList.remove('show');
+  document.getElementById('auth-success').classList.remove('show');
+}
+
+async function signInWithEmail() {
+  const email = document.getElementById('signin-email').value.trim();
+  const password = document.getElementById('signin-password').value;
+  if (!email || !password) { showAuthError('Please enter email and password'); return; }
+  const btn = document.getElementById('btn-signin');
+  btn.textContent = 'Signing in...'; btn.disabled = true;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  btn.textContent = 'Sign In'; btn.disabled = false;
+  if (error) { showAuthError(error.message); return; }
+  onSignedIn(data.user);
+}
+
+async function signUpWithEmail() {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  if (!name || !email || !password) { showAuthError('Please fill all fields'); return; }
+  if (password.length < 6) { showAuthError('Password must be at least 6 characters'); return; }
+  const btn = document.getElementById('btn-signup');
+  btn.textContent = 'Creating account...'; btn.disabled = true;
+  const { data, error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { full_name: name } }
+  });
+  btn.textContent = 'Create Account'; btn.disabled = false;
+  if (error) { showAuthError(error.message); return; }
+  if (data.user && !data.session) {
+    showAuthSuccess('✅ Check your email to confirm your account, then sign in!');
+  } else if (data.user) {
+    onSignedIn(data.user);
   }
 }
 
-
-
-
-
-
-
-
-
-  #suggestions-list { grid-template-columns: repeat(3,1fr) !important; }
-  #news-list { grid-template-columns: repeat(3,1fr) !important; }
-  #watchlist-list { grid-template-columns: repeat(4,1fr) !important; }
+async function signInWithGoogle() {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if (error) showAuthError(error.message);
 }
 
-
-
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  holdings = [];
+  allSuggestions = [];
+  showAuthScreen();
+  showToast('Signed out');
+}
 
 function onSignedIn(user) {
   currentUser = user;
@@ -1021,33 +1303,8 @@ function onSignedIn(user) {
     avatarImg.style.display = 'block';
     if (avatarEl) avatarEl.style.display = 'none';
   }
-  // Mobile header avatar
   const greetEl = document.getElementById('user-greeting');
-  if (greetEl) greetEl.textContent = name.split(' ')[0];
-
-  // Desktop nav avatar
-  const navAvatarText = document.getElementById('nav-avatar-text');
-  const navAvatarImg = document.getElementById('nav-avatar-img');
-  if (navAvatarText) navAvatarText.textContent = initials;
-  if (navAvatarImg && user.user_metadata?.avatar_url) {
-    navAvatarImg.src = user.user_metadata.avatar_url;
-    navAvatarImg.style.display = 'block';
-    if (navAvatarText) navAvatarText.style.display = 'none';
-  }
-
-  // Show desktop user menu
-  const desktopMenu = document.querySelector('.desktop-user-menu');
-  if (desktopMenu && window.innerWidth >= 768) {
-    desktopMenu.style.display = 'flex';
-    const g = document.getElementById('user-greeting');
-    if (g) g.style.display = 'block';
-  }
-  window.addEventListener('resize', () => {
-    const dm = document.querySelector('.desktop-user-menu');
-    if (dm && currentUser) dm.style.display = window.innerWidth >= 768 ? 'flex' : 'none';
-    const g = document.getElementById('user-greeting');
-    if (g && currentUser) g.style.display = window.innerWidth >= 768 ? 'block' : 'none';
-  });
+  if (greetEl) greetEl.textContent = 'Hi, ' + name.split(' ')[0] + '!';
   showAppScreen();
   loadSavedTheme();
   loadHoldingsFromSupabase();
