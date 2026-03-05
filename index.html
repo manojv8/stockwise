@@ -925,6 +925,12 @@
     </div>
   </div>
   <div class="content">
+    <div style="text-align:center;padding:20px">
+  <button onclick="generateSuggestions()" style="background:linear-gradient(135deg,var(--blue),var(--purple));color:white;border:none;border-radius:14px;padding:16px 32px;font-size:16px;font-weight:600;cursor:pointer">
+    ✨ Generate AI Insights
+  </button>
+  <div style="font-size:12px;color:var(--muted);margin-top:8px">Uses ~$0.02 per analysis</div>
+</div>
     <div id="suggestions-list">
       <div class="empty-state">
         <div class="icon">🤖</div>
@@ -1331,7 +1337,7 @@ async function loadHoldingsFromSupabase() {
     }));
     showToast('✅ Portfolio loaded (' + holdings.length + ' holdings)');
     renderPortfolio();
-    if (holdings.length > 0) generateSuggestions();
+    //if (holdings.length > 0) generateSuggestions();
   } catch(e) {
     showToast('⚠️ Could not load portfolio');
     renderPortfolio();
@@ -1759,6 +1765,14 @@ function resetAddSheet() {
 // AI SUGGESTIONS (via Claude API)
 // ==========================================
 async function generateSuggestions() {
+  // Use cached results if less than 30 mins old
+  const cached = localStorage.getItem('sw_suggestions');
+  const cachedTime = localStorage.getItem('sw_suggestions_time');
+  if (cached && cachedTime && Date.now() - cachedTime < 30 * 60 * 1000) {
+    allSuggestions = JSON.parse(cached);
+    renderSuggestions();
+    return;
+  }
   if (holdings.length === 0) {
     allSuggestions = [];
     renderSuggestions();
@@ -1833,6 +1847,8 @@ Base your analysis on the actual numbers provided. Be direct and specific.`;
     // Reset filter to 'all' when fresh suggestions arrive
     resetFilterTabs();
     renderSuggestions();
+    localStorage.setItem('sw_suggestions', JSON.stringify(allSuggestions));
+    localStorage.setItem('sw_suggestions_time', Date.now());
   } catch (e) {
     // Fallback suggestions based on actual P&L data
     allSuggestions = holdings.map(h => {
@@ -1933,6 +1949,12 @@ function resetFilterTabs() {
 // NEWS (via Claude with web search)
 // ==========================================
 async function loadNews() {
+  const cached = localStorage.getItem('sw_news');
+  const cachedTime = localStorage.getItem('sw_news_time');
+  if (cached && cachedTime && Date.now() - cachedTime < 60 * 60 * 1000) {
+    renderNews(JSON.parse(cached));
+    return;
+  }
   const list = document.getElementById('news-list');
   const tickers = holdings.map(h => h.ticker).join(', ') || 'S&P 500, NASDAQ, market';
 
@@ -1972,6 +1994,8 @@ Return 6-8 news items. Focus on actionable financial news.`;
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
     renderNews(parsed.news);
+    localStorage.setItem('sw_news', JSON.stringify(parsed.news));
+    localStorage.setItem('sw_news_time', Date.now());
   } catch (e) {
     renderNews([
       { headline: "Markets open higher as investors digest economic data", source: "Market Watch", summary: "Major indices gained in early trading.", time: "2 hours ago", impact: "positive", tickers: [] },
