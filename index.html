@@ -2118,7 +2118,18 @@ async function askAI() {
     const data = await res.json();
     const reply = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
     chatHistory.push({ role: 'assistant', content: reply });
-    document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;line-height:1.5">${reply}</div>`;
+    // Convert markdown to HTML
+    const formatted = reply
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/^### (.*?)$/gm, '<div style="font-weight:700;font-size:14px;margin:10px 0 4px">$1</div>')
+      .replace(/^## (.*?)$/gm, '<div style="font-weight:700;font-size:15px;margin:10px 0 4px">$1</div>')
+      .replace(/^# (.*?)$/gm, '<div style="font-weight:700;font-size:16px;margin:10px 0 4px">$1</div>')
+      .replace(/^- (.*?)$/gm, '<div style="padding:2px 0 2px 12px">• $1</div>')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+    
+    document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;line-height:1.6">${formatted}</div>`;
   } catch (e) {
     document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;color:var(--red)">Unable to connect to AI right now. Please try again.</div>`;
   }
