@@ -2096,28 +2096,48 @@ async function askAI() {
   messagesDiv.innerHTML += `<div id="${thinkingId}" style="margin-top:10px"><div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:12px 12px 12px 0;padding:10px 14px;font-size:14px;color:var(--muted)"><span class="loading-dot"></span> Thinking...</div></div>`;
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-  const portfolioContext = holdings.length > 0
-    ? `User's portfolio: ${holdings.map(h => `${h.ticker}: ${h.shares} shares @ $${h.cost} avg`).join(', ')}`
-    : 'User has no current holdings.';
+  // Always fetch latest prices for portfolio context
+  let portfolioContext = 'User has no current holdings.';
+  if (holdings.length > 0) {
+    const prices = await Promise.all(holdings.map(h => fetchStockPrice(h.ticker)));
+    const priceMap = {};
+    prices.forEach(p => priceMap[p.ticker] = p);
+
+    portfolioContext = `User portfolio: ` + holdings.map(h => {
+      const p = priceMap[h.ticker];
+      const gainPct = p.price ? ((p.price - h.cost) / h.cost * 100).toFixed(1) : 0;
+      return `${h.ticker}(${gainPct}%P&L)`;
+    }).join(', ');
+  }
+
+  // Keep only last 4 messages to avoid token overflow
+  if (chatHistory.length > 4) {
+    chatHistory = chatHistory.slice(-4);
+  }
 
   chatHistory.push({ role: 'user', content: q });
-  const systemPrompt = `You are a knowledgeable financial advisor assistant. ${portfolioContext}. Be concise, direct, and helpful. Keep responses under 150 words.`;
+
+  const systemPrompt = `You are a concise financial advisor. ${portfolioContext}. Max 100 words per response. Be direct and specific.`;
 
   try {
     const res = await fetch('https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json','Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdybnRxaGN5d2JrYWtxdGZvenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTM0OTgsImV4cCI6MjA4ODIyOTQ5OH0.8EHk5hS2H01JvfHQYNKodOtsTmtYjF1QXCIIy7Z7dCU', },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdybnRxaGN5d2JrYWtxdGZvenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTM0OTgsImV4cCI6MjA4ODIyOTQ5OH0.8EHk5hS2H01JvfHQYNKodOtsTmtYjF1QXCIIy7Z7dCU',
+      },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
+        max_tokens: 300,
         system: systemPrompt,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: chatHistory
+        messages: chatHistory  // NO web_search tool — saves lots of tokens
       })
     });
+
     const data = await res.json();
     const reply = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
     chatHistory.push({ role: 'assistant', content: reply });
+
     // Convert markdown to HTML
     const formatted = reply
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -2128,11 +2148,13 @@ async function askAI() {
       .replace(/^- (.*?)$/gm, '<div style="padding:2px 0 2px 12px">• $1</div>')
       .replace(/\n\n/g, '<br><br>')
       .replace(/\n/g, '<br>');
-    
+
     document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;line-height:1.6">${formatted}</div>`;
+
   } catch (e) {
     document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;color:var(--red)">Unable to connect to AI right now. Please try again.</div>`;
   }
+
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
