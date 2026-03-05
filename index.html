@@ -1803,7 +1803,7 @@ Respond with JSON only (no markdown, no explanation outside JSON):
 Base your analysis on the actual numbers provided. Be direct and specific.`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1957,7 +1957,7 @@ Return JSON only (no markdown):
 Return 6-8 news items. Focus on actionable financial news.`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2080,7 +2080,7 @@ async function askAI() {
   const systemPrompt = `You are a knowledgeable financial advisor assistant. ${portfolioContext}. Be concise, direct, and helpful. Keep responses under 150 words.`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
