@@ -2103,11 +2103,20 @@ async function askAI() {
     const priceMap = {};
     prices.forEach(p => priceMap[p.ticker] = p);
 
-    portfolioContext = `User portfolio: ` + holdings.map(h => {
+    const totalValue = holdings.reduce((sum, h) => {
       const p = priceMap[h.ticker];
-      const gainPct = p.price ? ((p.price - h.cost) / h.cost * 100).toFixed(1) : 0;
-      return `${h.ticker}(${gainPct}%P&L)`;
-    }).join(', ');
+      return sum + (p.price ? p.price * h.shares : h.cost * h.shares);
+    }, 0);
+
+    portfolioContext = `User portfolio worth $${totalValue.toFixed(0)}: ` +
+      holdings.map(h => {
+        const p = priceMap[h.ticker];
+        const currentPrice = p.price ? `$${p.price.toFixed(2)}` : `$${h.cost}`;
+        const gainPct = p.price ? ((p.price - h.cost) / h.cost * 100).toFixed(1) : '0';
+        const value = p.price ? (p.price * h.shares).toFixed(0) : (h.cost * h.shares).toFixed(0);
+        const dayChg = p.changePct ? p.changePct.toFixed(1) : '0';
+        return `${h.ticker}(${h.shares.toFixed(2)}shares@avg$${h.cost},now${currentPrice},val$${value},P&L${gainPct}%,day${dayChg}%)`;
+      }).join(' | ');
   }
 
   // Keep only last 4 messages to avoid token overflow
