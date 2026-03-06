@@ -898,7 +898,10 @@
     <!-- Holdings -->
     <div class="section-header">
       <div class="section-title">Holdings</div>
-      <button class="section-action" onclick="openAddSheet()">+ Add Stock</button>
+      <div style="display:flex;gap:8px">
+        <button class="section-action" onclick="openScreenshotSheet()" style="background:rgba(0,229,160,0.1);color:var(--green);border:1px solid rgba(0,229,160,0.2)">📸 Sync</button>
+        <button class="section-action" onclick="openAddSheet()">+ Add</button>
+      </div>
     </div>
 
     <div id="holdings-list">
@@ -1182,10 +1185,61 @@
   </button>
 </div>
 
-<!-- THEME PICKER SHEET -->
+<!-- SCREENSHOT SYNC SHEET -->
+<div class="sheet-overlay" id="screenshot-overlay" onclick="closeSheet('screenshot')"></div>
+<div class="sheet" id="screenshot-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">📸 Sync from Screenshot</div>
+
+  <div id="screenshot-step-1">
+    <div style="background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:14px;padding:14px;margin-bottom:20px;font-size:13px;line-height:1.6;color:var(--muted)">
+      <div style="font-weight:700;color:var(--green);margin-bottom:6px">How it works:</div>
+      1. Take a screenshot of your Robinhood portfolio<br>
+      2. Upload it here<br>
+      3. AI reads all your stocks automatically<br>
+      4. Review & sync to your portfolio ✅
+    </div>
+
+    <div id="screenshot-drop-area" onclick="document.getElementById('screenshot-file-input').click()"
+      style="border:2px dashed rgba(0,229,160,0.3);border-radius:16px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:16px">
+      <div style="font-size:48px;margin-bottom:12px">📱</div>
+      <div style="font-weight:600;font-size:15px;margin-bottom:6px">Tap to upload screenshot</div>
+      <div style="font-size:12px;color:var(--muted)">Supports Robinhood, or any broker screenshot</div>
+    </div>
+    <input type="file" id="screenshot-file-input" accept="image/*" style="display:none" onchange="handleScreenshotUpload(event)">
+
+    <div id="screenshot-preview" style="display:none;margin-bottom:16px">
+      <img id="screenshot-img" style="width:100%;border-radius:12px;max-height:200px;object-fit:cover">
+    </div>
+
+    <button id="screenshot-analyze-btn" onclick="analyzeScreenshot()" style="display:none;width:100%;background:linear-gradient(135deg,var(--green),#00b8a0);color:#000;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer">
+      🔍 Analyze Screenshot
+    </button>
+  </div>
+
+  <!-- Step 2: Preview detected stocks -->
+  <div id="screenshot-step-2" style="display:none">
+    <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Detected Stocks</div>
+    <div id="screenshot-detected-list" style="margin-bottom:16px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="resetScreenshotSheet()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:14px;font-size:14px;font-weight:600;cursor:pointer">
+        ← Try Again
+      </button>
+      <button onclick="syncDetectedStocks()" style="background:linear-gradient(135deg,var(--blue),var(--purple));color:white;border:none;border-radius:14px;padding:14px;font-size:14px;font-weight:700;cursor:pointer">
+        ✅ Sync All
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="screenshot-loading" style="display:none;text-align:center;padding:40px 0">
+    <div style="font-size:48px;margin-bottom:16px">🤖</div>
+    <div style="font-weight:600;font-size:16px;margin-bottom:8px">Analyzing screenshot...</div>
+    <div style="font-size:13px;color:var(--muted)">Claude AI is reading your portfolio</div>
+  </div>
+</div>
 
 
-</div><!-- end app-screen -->
 
 <div class="toast" id="toast"></div>
 
@@ -2764,6 +2818,202 @@ async function fetchDividendYield(ticker) {
     }
   }
   return 0;
+}
+
+// ==========================================
+// SCREENSHOT SYNC
+// ==========================================
+let screenshotBase64 = null;
+let detectedStocks = [];
+
+function openScreenshotSheet() {
+  document.getElementById('screenshot-overlay').classList.add('open');
+  document.getElementById('screenshot-sheet').classList.add('open');
+}
+
+function resetScreenshotSheet() {
+  screenshotBase64 = null;
+  detectedStocks = [];
+  document.getElementById('screenshot-step-1').style.display = 'block';
+  document.getElementById('screenshot-step-2').style.display = 'none';
+  document.getElementById('screenshot-loading').style.display = 'none';
+  document.getElementById('screenshot-preview').style.display = 'none';
+  document.getElementById('screenshot-analyze-btn').style.display = 'none';
+  document.getElementById('screenshot-file-input').value = '';
+}
+
+function handleScreenshotUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    screenshotBase64 = dataUrl.split(',')[1]; // strip the data:image/...;base64, prefix
+
+    // Show preview
+    document.getElementById('screenshot-img').src = dataUrl;
+    document.getElementById('screenshot-preview').style.display = 'block';
+    document.getElementById('screenshot-analyze-btn').style.display = 'block';
+
+    // Update drop area
+    document.getElementById('screenshot-drop-area').style.borderColor = 'rgba(0,229,160,0.6)';
+    document.getElementById('screenshot-drop-area').style.background = 'rgba(0,229,160,0.05)';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeScreenshot() {
+  if (!screenshotBase64) { showToast('Please upload a screenshot first'); return; }
+
+  // Show loading
+  document.getElementById('screenshot-step-1').style.display = 'none';
+  document.getElementById('screenshot-loading').style.display = 'block';
+
+  try {
+    const res = await fetch('https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdybnRxaGN5d2JrYWtxdGZvenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTM0OTgsImV4cCI6MjA4ODIyOTQ5OH0.8EHk5hS2H01JvfHQYNKodOtsTmtYjF1QXCIIy7Z7dCU',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/jpeg',
+                data: screenshotBase64
+              }
+            },
+            {
+              type: 'text',
+              text: `This is a brokerage portfolio screenshot. Extract ALL stock positions and return ONLY valid JSON, no markdown, no explanation:
+{
+  "stocks": [
+    {
+      "ticker": "AAPL",
+      "shares": 10.5,
+      "avgCost": 150.00,
+      "name": "Apple Inc"
+    }
+  ]
+}
+Rules:
+- ticker must be the stock symbol (e.g. AAPL, NVDA, TSLA)
+- shares must be a number
+- avgCost must be the average cost / average buy price per share as a number
+- If avgCost is not visible, use 0
+- Include ALL stocks visible in the screenshot
+- Return ONLY the JSON object, nothing else`
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
+
+    // Extract JSON
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    if (jsonStart === -1 || jsonEnd === -1) throw new Error('No JSON in response');
+    const parsed = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+
+    if (!parsed.stocks || parsed.stocks.length === 0) throw new Error('No stocks detected');
+
+    detectedStocks = parsed.stocks.filter(s => s.ticker && s.shares > 0);
+
+    if (detectedStocks.length === 0) throw new Error('No valid stocks found');
+
+    // Show detected stocks
+    document.getElementById('screenshot-loading').style.display = 'none';
+    document.getElementById('screenshot-step-2').style.display = 'block';
+    renderDetectedStocks();
+
+  } catch(e) {
+    document.getElementById('screenshot-loading').style.display = 'none';
+    document.getElementById('screenshot-step-1').style.display = 'block';
+    showToast('❌ Could not read screenshot. Try a clearer image.');
+    console.error('Screenshot analysis error:', e);
+  }
+}
+
+function renderDetectedStocks() {
+  const list = document.getElementById('screenshot-detected-list');
+  list.innerHTML = detectedStocks.map((s, i) => `
+    <div style="background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--blue)">${s.ticker.substring(0,2)}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px">${s.ticker}</div>
+        <div style="font-size:12px;color:var(--muted)">${s.name || s.ticker} · ${s.shares} shares</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:600">avg $${s.avgCost > 0 ? s.avgCost.toFixed(2) : '—'}</div>
+        <div onclick="removeDetectedStock(${i})" style="font-size:11px;color:var(--red);cursor:pointer;margin-top:2px">✕ remove</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function removeDetectedStock(index) {
+  detectedStocks.splice(index, 1);
+  if (detectedStocks.length === 0) {
+    resetScreenshotSheet();
+    showToast('No stocks left — try again');
+  } else {
+    renderDetectedStocks();
+  }
+}
+
+async function syncDetectedStocks() {
+  if (detectedStocks.length === 0) return;
+
+  const btn = document.querySelector('#screenshot-sheet button[onclick="syncDetectedStocks()"]');
+  if (btn) { btn.textContent = '⏳ Syncing...'; btn.disabled = true; }
+
+  let added = 0, updated = 0, skipped = 0;
+
+  for (const s of detectedStocks) {
+    const ticker = s.ticker.toUpperCase().trim();
+    const shares = parseFloat(s.shares) || 0;
+    const cost = parseFloat(s.avgCost) || 0;
+    if (!ticker || shares <= 0) { skipped++; continue; }
+
+    const existing = holdings.find(h => h.ticker === ticker);
+
+    try {
+      if (existing) {
+        // Update existing holding
+        existing.shares = shares;
+        if (cost > 0) existing.cost = cost;
+        await updateHoldingInSupabase(existing.id, existing.shares, existing.cost);
+        updated++;
+      } else {
+        // Add new holding
+        const finalCost = cost > 0 ? cost : 1;
+        const newHolding = { ticker, shares, cost: finalCost };
+        const saved = await addHoldingToSupabase(newHolding);
+        if (saved) newHolding.id = saved.id;
+        holdings.push(newHolding);
+        added++;
+      }
+    } catch(e) {
+      console.error('Sync error for', ticker, e);
+      skipped++;
+    }
+  }
+
+  closeSheet('screenshot');
+  resetScreenshotSheet();
+  showToast(`✅ Synced! +${added} new, ${updated} updated${skipped > 0 ? ', ' + skipped + ' skipped' : ''}`);
+  renderPortfolio();
 }
 
 // ==========================================
