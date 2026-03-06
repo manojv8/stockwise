@@ -3295,6 +3295,12 @@ async function importSelectedRhHoldings() {
 // ==========================================
 const RH_API = 'https://api.robinhood.com';
 const RH_CLIENT_ID = 'c82SH0WZOsabOXGP2sxqcj34FFK0hd39';
+// Use a stable device token per browser session (Robinhood tracks this)
+const RH_DEVICE_TOKEN = (() => {
+  let t = localStorage.getItem('rh_device_token');
+  if (!t) { t = crypto.randomUUID(); localStorage.setItem('rh_device_token', t); }
+  return t;
+})();
 let rhsToken = null;
 let rhsHoldings = [];
 
@@ -3355,17 +3361,21 @@ function rhsBackToLogin() {
 
 // Call Robinhood API via CORS proxy
 async function rhsFetch(path, options = {}) {
-  const url = `https://corsproxy.io/?${encodeURIComponent(RH_API + path)}`;
-  const res = await fetch(url, {
+  const targetUrl = RH_API + path;
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+  const res = await fetch(proxyUrl, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'X-Robinhood-API-Version': '1.431.4',
+      'User-Agent': 'Robinhood/823 (iPhone; iOS 16.4.1; Scale/3.00)',
       ...(options.headers || {})
     },
     signal: AbortSignal.timeout(15000)
   });
-  const data = await res.json();
+  let data;
+  try { data = await res.json(); } catch { data = {}; }
   return { ok: res.ok, status: res.status, data };
 }
 
@@ -3385,13 +3395,14 @@ async function rhsLogin() {
       method: 'POST',
       body: JSON.stringify({
         client_id: RH_CLIENT_ID,
-        expires_in: '86400',
+        expires_in: 86400,
         grant_type: 'password',
         password,
         scope: 'internal',
         username,
         challenge_type: 'sms',
-        device_token: crypto.randomUUID(),
+        device_token: RH_DEVICE_TOKEN,
+        token_type: 'Bearer',
       })
     });
 
@@ -3412,7 +3423,7 @@ async function rhsLogin() {
       return;
     }
 
-    const msg = data.detail || data.non_field_errors?.[0] || `Login failed (${status})`;
+    const msg = data.detail || (Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : null) || data.message || `Login failed (${status})`;
     rhsShowStep('login');
     rhsShowError(msg);
 
@@ -3440,13 +3451,14 @@ async function rhsMFASubmit() {
       method: 'POST',
       body: JSON.stringify({
         client_id: RH_CLIENT_ID,
-        expires_in: '86400',
+        expires_in: 86400,
         grant_type: 'password',
         password,
         scope: 'internal',
         username,
         challenge_type: 'sms',
-        device_token: crypto.randomUUID(),
+        device_token: RH_DEVICE_TOKEN,
+        token_type: 'Bearer',
         mfa_code,
       })
     });
@@ -3462,7 +3474,7 @@ async function rhsMFASubmit() {
       return;
     }
 
-    const msg = data.detail || data.mfa_code?.[0] || `Verification failed (${status})`;
+    const msg = data.detail || (Array.isArray(data.mfa_code) ? data.mfa_code[0] : null) || data.message || `Verification failed (${status})`;
     rhsShowStep('mfa');
     rhsShowError(msg, 'mfa');
 
