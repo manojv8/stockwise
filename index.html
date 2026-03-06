@@ -3291,11 +3291,12 @@ async function importSelectedRhHoldings() {
 }
 
 // ==========================================
-// ROBINHOOD SYNC (via Supabase Edge Function)
+// ROBINHOOD SYNC (direct — no Edge Function)
 // ==========================================
-const RH_SYNC_URL = `${SUPABASE_URL}/functions/v1/robinhood-sync`;
-let rhsToken = null;       // Robinhood access token (session only, never persisted)
-let rhsHoldings = [];      // positions fetched from Robinhood
+const RH_API = 'https://api.robinhood.com';
+const RH_CLIENT_ID = 'c82SH0WZOsabOXGP2sxqcj34FFK0hd39';
+let rhsToken = null;
+let rhsHoldings = [];
 
 function openRobinhoodSync() {
   rhsToken = null;
@@ -3313,7 +3314,6 @@ function openRobinhoodSync() {
 function closeRhSync() {
   document.getElementById('rh-sync-overlay').classList.remove('open');
   document.getElementById('rh-sync-sheet').classList.remove('open');
-  // Clear credentials from DOM immediately
   setTimeout(() => {
     document.getElementById('rhs-password').value = '';
     document.getElementById('rhs-mfa-code').value = '';
@@ -3353,6 +3353,22 @@ function rhsBackToLogin() {
   rhsHideError();
 }
 
+// Call Robinhood API via CORS proxy
+async function rhsFetch(path, options = {}) {
+  const url = `https://corsproxy.io/?${encodeURIComponent(RH_API + path)}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(options.headers || {})
+    },
+    signal: AbortSignal.timeout(15000)
+  });
+  const data = await res.json();
+  return { ok: res.ok, status: res.status, data };
+}
+
 async function rhsLogin() {
   const username = document.getElementById('rhs-username').value.trim();
   const password = document.getElementById('rhs-password').value;
@@ -3365,46 +3381,45 @@ async function rhsLogin() {
   rhsSetLoading('Connecting to Robinhood...', 'Verifying your credentials');
 
   try {
-    const res = await fetch(RH_SYNC_URL, {
+    const { ok, status, data } = await rhsFetch('/oauth2/token/', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-      },
-      body: JSON.stringify({ action: 'login', username, password })
+      body: JSON.stringify({
+        client_id: RH_CLIENT_ID,
+        expires_in: '86400',
+        grant_type: 'password',
+        password,
+        scope: 'internal',
+        username,
+        challenge_type: 'sms',
+        device_token: crypto.randomUUID(),
+      })
     });
 
-    const data = await res.json();
+    btn.textContent = 'Connect Robinhood →'; btn.disabled = false;
 
-    // MFA required
-    if (data.status === 'mfa_required') {
-      btn.textContent = 'Connect Robinhood →'; btn.disabled = false;
+    if (data.mfa_required) {
       rhsShowStep('mfa');
       setTimeout(() => document.getElementById('rhs-mfa-code').focus(), 300);
       return;
     }
 
-    // Error
-    if (data.error) {
-      btn.textContent = 'Connect Robinhood →'; btn.disabled = false;
-      rhsShowStep('login');
-      rhsShowError(data.error);
+    if (data.access_token) {
+      rhsToken = data.access_token;
+      rhsSetLoading('Fetching your portfolio...', 'Reading positions from Robinhood');
+      rhsShowStep('loading');
+      rhsHoldings = await rhsFetchPositions(rhsToken);
+      rhsShowPreview();
       return;
     }
 
-    // Success — got positions
-    if (data.status === 'success') {
-      btn.textContent = 'Connect Robinhood →'; btn.disabled = false;
-      rhsToken = data.rh_token;
-      rhsHoldings = data.holdings || [];
-      rhsShowPreview();
-    }
+    const msg = data.detail || data.non_field_errors?.[0] || `Login failed (${status})`;
+    rhsShowStep('login');
+    rhsShowError(msg);
 
   } catch(e) {
     btn.textContent = 'Connect Robinhood →'; btn.disabled = false;
     rhsShowStep('login');
-    rhsShowError('Connection failed. Check your internet and try again.');
+    rhsShowError('Connection failed — check your internet and try again.');
   }
 }
 
@@ -3421,60 +3436,113 @@ async function rhsMFASubmit() {
   rhsSetLoading('Verifying code...', 'Logging in to Robinhood');
 
   try {
-    const res = await fetch(RH_SYNC_URL, {
+    const { ok, status, data } = await rhsFetch('/oauth2/token/', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-      },
-      body: JSON.stringify({ action: 'login', username, password, mfa_code })
+      body: JSON.stringify({
+        client_id: RH_CLIENT_ID,
+        expires_in: '86400',
+        grant_type: 'password',
+        password,
+        scope: 'internal',
+        username,
+        challenge_type: 'sms',
+        device_token: crypto.randomUUID(),
+        mfa_code,
+      })
     });
 
-    const data = await res.json();
+    btn.textContent = 'Verify & Sync →'; btn.disabled = false;
 
-    if (data.error) {
-      btn.textContent = 'Verify & Sync →'; btn.disabled = false;
-      rhsShowStep('mfa');
-      rhsShowError(data.error, 'mfa');
+    if (data.access_token) {
+      rhsToken = data.access_token;
+      rhsSetLoading('Fetching your portfolio...', 'Reading positions from Robinhood');
+      rhsShowStep('loading');
+      rhsHoldings = await rhsFetchPositions(rhsToken);
+      rhsShowPreview();
       return;
     }
 
-    if (data.status === 'success') {
-      btn.textContent = 'Verify & Sync →'; btn.disabled = false;
-      rhsToken = data.rh_token;
-      rhsHoldings = data.holdings || [];
-      rhsShowPreview();
-    }
+    const msg = data.detail || data.mfa_code?.[0] || `Verification failed (${status})`;
+    rhsShowStep('mfa');
+    rhsShowError(msg, 'mfa');
 
   } catch(e) {
     btn.textContent = 'Verify & Sync →'; btn.disabled = false;
     rhsShowStep('mfa');
-    rhsShowError('Verification failed. Try again.', 'mfa');
+    rhsShowError('Verification failed — try again.', 'mfa');
   }
+}
+
+async function rhsFetchPositions(token) {
+  const authHeaders = { 'Authorization': `Bearer ${token}` };
+
+  // Fetch all non-zero positions (paginated)
+  let url = '/positions/?nonzero=true&count=100';
+  let allPositions = [];
+  while (url) {
+    const { ok, data } = await rhsFetch(url, { headers: authHeaders });
+    if (!ok) throw new Error('Could not fetch positions');
+    allPositions = allPositions.concat(data.results || []);
+    // Extract path from next URL
+    url = data.next ? new URL(data.next).pathname + new URL(data.next).search : null;
+  }
+
+  if (!allPositions.length) return [];
+
+  // Fetch instrument details in parallel batches
+  const instrUrls = [...new Set(allPositions.map(p => p.instrument))];
+  const instrMap = {};
+  for (let i = 0; i < instrUrls.length; i += 8) {
+    const batch = instrUrls.slice(i, i + 8);
+    const results = await Promise.all(batch.map(async instrUrl => {
+      try {
+        const path = new URL(instrUrl).pathname;
+        const { data } = await rhsFetch(path, { headers: authHeaders });
+        return data;
+      } catch { return null; }
+    }));
+    results.filter(Boolean).forEach(instr => { instrMap[instr.url] = instr; });
+  }
+
+  // Build holdings array
+  const result = [];
+  for (const pos of allPositions) {
+    const shares = parseFloat(pos.quantity);
+    const avgCost = parseFloat(pos.average_buy_price);
+    if (shares <= 0 || avgCost <= 0) continue;
+    const instr = instrMap[pos.instrument];
+    if (!instr?.symbol) continue;
+    result.push({
+      ticker: instr.symbol,
+      name: instr.simple_name || instr.name || instr.symbol,
+      shares: parseFloat(shares.toFixed(6)),
+      avgCost: parseFloat(avgCost.toFixed(4)),
+    });
+  }
+  return result.sort((a, b) => (b.shares * b.avgCost) - (a.shares * a.avgCost));
 }
 
 function rhsShowPreview() {
   rhsShowStep('preview');
   const count = rhsHoldings.length;
   document.getElementById('rhs-preview-badge').textContent = `${count} stock${count !== 1 ? 's' : ''} found`;
-
   const existing = new Set(holdings.map(h => h.ticker));
 
   document.getElementById('rhs-preview-list').innerHTML = rhsHoldings.map(h => {
     const isOwned = existing.has(h.ticker);
-    const totalVal = (h.shares * h.avgCost).toFixed(0);
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;margin-bottom:6px;background:var(--surface2);border:1px solid var(--border)">
         <div style="width:38px;height:38px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--blue);flex-shrink:0">${h.ticker.substring(0,3)}</div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
             <span style="font-weight:700;font-size:14px">${h.ticker}</span>
-            ${isOwned ? '<span style="font-size:10px;padding:1px 6px;border-radius:6px;background:rgba(245,200,66,0.15);color:var(--gold)">update</span>' : '<span style="font-size:10px;padding:1px 6px;border-radius:6px;background:rgba(0,200,5,0.12);color:#00c805">new</span>'}
+            ${isOwned
+              ? '<span style="font-size:10px;padding:1px 6px;border-radius:6px;background:rgba(245,200,66,0.15);color:var(--gold)">update</span>'
+              : '<span style="font-size:10px;padding:1px 6px;border-radius:6px;background:rgba(0,200,5,0.12);color:#00c805">new</span>'}
           </div>
           <div style="font-size:11px;color:var(--muted)">${h.shares.toFixed(4)} shares · avg $${h.avgCost.toFixed(2)}</div>
         </div>
-        <div style="font-size:13px;font-weight:700;text-align:right;flex-shrink:0">$${parseFloat(totalVal).toLocaleString()}</div>
+        <div style="font-size:13px;font-weight:700;text-align:right;flex-shrink:0">$${(h.shares * h.avgCost).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
       </div>`;
   }).join('');
 
@@ -3488,53 +3556,47 @@ async function rhsConfirmSync() {
   const btn = document.getElementById('rhs-sync-btn');
   btn.textContent = 'Syncing...'; btn.disabled = true;
   rhsShowStep('loading');
-  rhsSetLoading('Syncing to Stockwise...', `Saving ${rhsHoldings.length} holdings`);
+  rhsSetLoading('Saving to Stockwise...', `Updating ${rhsHoldings.length} holdings`);
 
-  try {
-    const session = await sb.auth.getSession();
-    const accessToken = session.data.session?.access_token;
+  // Fetch existing holdings map
+  const { data: existing } = await sb.from('holdings').select('id,ticker').eq('user_id', currentUser.id);
+  const existingMap = {};
+  (existing || []).forEach(h => { existingMap[h.ticker] = h.id; });
 
-    const res = await fetch(RH_SYNC_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${accessToken || SUPABASE_KEY}`,
-      },
-      body: JSON.stringify({
-        action: 'sync',
-        rh_token: rhsToken,
-        supabase_user_id: currentUser.id
-      })
-    });
+  let imported = 0, updated = 0, failed = 0;
 
-    const data = await res.json();
-
-    if (data.error) {
-      btn.textContent = `✅ Sync ${rhsHoldings.length} Stocks`; btn.disabled = false;
-      rhsShowStep('preview');
-      showToast('❌ ' + data.error);
-      return;
+  for (const h of rhsHoldings) {
+    try {
+      if (existingMap[h.ticker]) {
+        await sb.from('holdings').update({ shares: h.shares, cost: h.avgCost })
+          .eq('id', existingMap[h.ticker]).eq('user_id', currentUser.id);
+        // Update local state too
+        const local = holdings.find(x => x.ticker === h.ticker);
+        if (local) { local.shares = h.shares; local.cost = h.avgCost; }
+        updated++;
+      } else {
+        const { data: saved } = await sb.from('holdings')
+          .insert({ user_id: currentUser.id, ticker: h.ticker, shares: h.shares, cost: h.avgCost })
+          .select().single();
+        holdings.push({ id: saved?.id, ticker: h.ticker, shares: h.shares, cost: h.avgCost });
+        imported++;
+      }
+    } catch(e) {
+      console.error('Failed for', h.ticker, e);
+      failed++;
     }
-
-    // Success
-    let msg = '';
-    if (data.imported > 0) msg += `${data.imported} new stock${data.imported !== 1 ? 's' : ''} added`;
-    if (data.updated > 0)  msg += (msg ? ' · ' : '') + `${data.updated} updated`;
-    if (data.failed > 0)   msg += (msg ? '\n' : '') + `⚠️ ${data.failed} failed`;
-
-    document.getElementById('rhs-success-msg').textContent = msg || `${data.total} holdings synced successfully`;
-    rhsShowStep('success');
-    rhsToken = null; // clear token from memory
-
-    // Reload portfolio from Supabase
-    await loadHoldingsFromSupabase();
-
-  } catch(e) {
-    btn.textContent = `✅ Sync ${rhsHoldings.length} Stocks`; btn.disabled = false;
-    rhsShowStep('preview');
-    showToast('❌ Sync failed — try again');
   }
+
+  rhsToken = null;
+
+  let msg = '';
+  if (imported > 0) msg += `${imported} new stock${imported !== 1 ? 's' : ''} added`;
+  if (updated > 0)  msg += (msg ? ' · ' : '') + `${updated} updated`;
+  if (failed > 0)   msg += (msg ? ' · ' : '') + `⚠️ ${failed} failed`;
+
+  document.getElementById('rhs-success-msg').textContent = msg || `${rhsHoldings.length} holdings synced`;
+  rhsShowStep('success');
+  renderPortfolio();
 }
 
 // ==========================================
