@@ -1766,8 +1766,8 @@ function showPriceStatus(state, text) {
 }
 
 function forceRefreshPrices() {
-  // Clear all cache
   Object.keys(stockCache).forEach(k => delete stockCache[k]);
+  Object.keys(dividendCache).forEach(k => delete dividendCache[k]);
   showToast('🔄 Refreshing live prices...');
   renderPortfolio(true);
 }
@@ -2864,29 +2864,19 @@ async function fetchDividendYield(ticker, currentPrice = 0) {
       const res = await fetchWithTimeout(url, 10000, { headers });
       if (res.ok) {
         const data = await res.json();
-        // Response: { corporate_actions: { cash_dividends: { AAPL: [{rate, ex_date}] } } }
-        // or: { cash_dividends: [{symbol, rate}] }  depending on version
-        let divs = [];
-        if (data.corporate_actions?.cash_dividends?.[key]) {
-          divs = data.corporate_actions.cash_dividends[key];
-        } else if (data.cash_dividends) {
-          divs = Array.isArray(data.cash_dividends)
-            ? data.cash_dividends.filter(d => d.symbol === key)
-            : (data.cash_dividends[key] || []);
-        }
-        // Each entry has a `rate` field (per-share cash amount)
-        const validDivs = divs.filter(d => parseFloat(d.rate || d.cash || 0) > 0);
-        if (validDivs.length > 0) {
-          const annualCash = validDivs.reduce((s, d) => s + parseFloat(d.rate || d.cash), 0);
+        // Actual shape: { corporate_actions: { cash_dividends: [ {symbol, rate, ex_date, ...} ] } }
+        // cash_dividends is a FLAT ARRAY, not keyed by ticker
+        const divs = (data.corporate_actions?.cash_dividends || [])
+          .filter(d => parseFloat(d.rate) > 0);
+        if (divs.length > 0) {
+          const annualCash = divs.reduce((s, d) => s + parseFloat(d.rate), 0);
           const yieldPct = parseFloat(((annualCash / currentPrice) * 100).toFixed(4));
           dividendCache[key] = { yieldPct, ts: Date.now() };
           return yieldPct;
         }
-        // Got a valid response with zero dividends — cache as confirmed 0
-        if (res.status === 200) {
-          dividendCache[key] = { yieldPct: 0, ts: Date.now() };
-          return 0;
-        }
+        // 200 response but no dividends — confirmed zero payer, cache it
+        dividendCache[key] = { yieldPct: 0, ts: Date.now() };
+        return 0;
       }
     } catch(e) {
       console.warn('Alpaca data API dividend failed for', key, ':', e.message);
