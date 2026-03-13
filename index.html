@@ -1257,190 +1257,271 @@ let currentFilter = 'all';
 let refreshInterval = null;
 
 // ==========================================
-// ===  ROBUST PRICE FETCHING ENGINE  ======
+// ===  PRICE FETCHING ENGINE  =============
+// ==========================================
+// Source: Alpaca Market Data API v2 (free tier)
+//   - Requires ALPACA_API_KEY + ALPACA_API_SECRET (set in config below)
+//   - Free tier: IEX feed, 200 req/min, no cost
+//   - Batch snapshot endpoint: all tickers in ONE request
+//   - Proper JSON REST API, native CORS support
+//   - Falls back to stooq.com CSV if Alpaca fails
+//   - Cache TTL: 5 minutes
 // ==========================================
 
-/**
- * All CORS proxy builders — tried in order, fastest first.
- * Each returns a full URL string to fetch from.
- */
-const PROXY_BUILDERS = [
-  // 1. corsproxy.io — usually fastest
-  (ticker) => {
-    const base = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d&includePrePost=false`;
-    return { url: `https://corsproxy.io/?${encodeURIComponent(base)}`, isWrapped: false };
-  },
-  // 2. allorigins.win — JSON wrapper
-  (ticker) => {
-    const base = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
-    return { url: `https://api.allorigins.win/get?url=${encodeURIComponent(base)}`, isWrapped: true };
-  },
-  // 3. Yahoo v7 quote endpoint via corsproxy
-  (ticker) => {
-    const base = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}&fields=regularMarketPrice,regularMarketPreviousClose,regularMarketChange,regularMarketChangePercent,shortName`;
-    return { url: `https://corsproxy.io/?${encodeURIComponent(base)}`, isWrapped: false, isV7: true };
-  },
-  // 4. v7 via allorigins
-  (ticker) => {
-    const base = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}&fields=regularMarketPrice,regularMarketPreviousClose,regularMarketChange,regularMarketChangePercent,shortName`;
-    return { url: `https://api.allorigins.win/get?url=${encodeURIComponent(base)}`, isWrapped: true, isV7: true };
-  },
-];
+// ---- CONFIG: paste your Alpaca keys here ----
+const ALPACA_KEY    = '';   // e.g. 'PKYFKR7OHVQNFYCXL7WNC3RJDC'
+const ALPACA_SECRET = '';   // e.g. '5hrQ4sPdqcSBgFUUoTPictqRRRLEBnGgzMpWLhYC7Sgs'
+const ALPACA_BASE   = 'https://data.alpaca.markets/v2';
+// ---------------------------------------------
 
 /**
- * Fetch with timeout — compatible with all browsers (no AbortSignal.timeout)
+ * Fetch with timeout — cross-browser safe
  */
-function fetchWithTimeout(url, ms = 7000) {
+function fetchWithTimeout(url, ms = 10000, opts = {}) {
   return new Promise((resolve, reject) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => {
-      controller.abort();
-      reject(new Error('Timeout'));
-    }, ms);
-    fetch(url, { signal: controller.signal })
+    const timer = setTimeout(() => { controller.abort(); reject(new Error('Timeout')); }, ms);
+    fetch(url, { signal: controller.signal, ...opts })
       .then(r => { clearTimeout(timer); resolve(r); })
       .catch(e => { clearTimeout(timer); reject(e); });
   });
 }
 
 /**
- * Parse Yahoo Finance v8 chart response
+ * PRIMARY: Alpaca batch snapshot — all tickers in ONE request.
+ * Returns { TICKER: { price, change, changePct, name, error } }
+ * Uses IEX feed (free tier). Falls back gracefully if no keys set.
  */
-function parseV8Response(ticker, json) {
-  const result = json.chart && json.chart.result && json.chart.result[0];
-  if (!result) return null;
-  const meta = result.meta;
-  const price = meta.regularMarketPrice || meta.chartPreviousClose;
-  if (!price || price <= 0) return null;
-  const prev = meta.chartPreviousClose || meta.previousClose || price;
-  const change = price - prev;
-  const changePct = prev > 0 ? (change / prev) * 100 : 0;
+async function fetchPricesViaAlpaca(tickers) {
+  if (!ALPACA_KEY || !ALPACA_SECRET) throw new Error('No Alpaca keys configured');
+
+  const symbols = tickers.map(t => t.toUpperCase()).join(',');
+  const url = `${ALPACA_BASE}/stocks/snapshots?symbols=${encodeURIComponent(symbols)}&feed=iex`;
+
+  const res = await fetchWithTimeout(url, 12000, {
+    headers: {
+      'APCA-API-KEY-ID': ALPACA_KEY,
+      'APCA-API-SECRET-KEY': ALPACA_SECRET,
+    }
+  });
+
+  if (!res.ok) throw new Error('Alpaca API error: ' + res.status);
+  const data = await res.json();
+
+  // Response shape: { "AAPL": { latestTrade: {p}, latestQuote: {ap,bp}, dailyBar: {o,c}, prevDailyBar: {c} } }
+  const result = {};
+  for (const [ticker, snap] of Object.entries(data)) {
+    try {
+      // Use latest trade price, fallback to mid-quote
+      const price = snap.latestTrade?.p
+        || ((snap.latestQuote?.ap + snap.latestQuote?.bp) / 2)
+        || snap.dailyBar?.c;
+      if (!price || price <= 0) continue;
+
+      const prevClose = snap.prevDailyBar?.c || price;
+      const change = price - prevClose;
+      const changePct = prevClose > 0 ? (change / prevClose) * 100 : 0;
+
+      result[ticker] = {
+        ticker,
+        price:     Math.round(price     * 10000) / 10000,
+        change:    Math.round(change    * 10000) / 10000,
+        changePct: Math.round(changePct * 10000) / 10000,
+        name: ticker,
+        error: false,
+        source: 'alpaca',
+        ts: Date.now(),
+      };
+    } catch(e) { continue; }
+  }
+  return result;
+}
+
+/**
+ * FALLBACK: stooq.com CSV — free, no key, proper CORS.
+ * Used when Alpaca keys aren't set or Alpaca fails.
+ */
+function toStooqSymbol(ticker) {
+  return ticker.toLowerCase().replace(/\./g, '-') + '.us';
+}
+
+async function fetchPricesBatchStooq(tickers) {
+  const symbols = tickers.map(toStooqSymbol).join(',');
+  const url = `https://stooq.com/q/l/?s=${symbols}&f=sd2t2ohlcv&h&e=csv`;
+  const res = await fetchWithTimeout(url, 12000);
+  if (!res.ok) throw new Error('stooq batch HTTP ' + res.status);
+  const csv = await res.text();
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) throw new Error('Empty stooq response');
+
+  const header = lines[0].toLowerCase();
+  const hasTime = header.includes('time');
+  const openIdx  = hasTime ? 3 : 2;
+  const closeIdx = hasTime ? 6 : 5;
+
+  const result = {};
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(',');
+    if (parts.length < 5) continue;
+    const rawSym = parts[0].toUpperCase().replace(/\.US$/, '').replace(/-/g, '.');
+    const close = parseFloat(parts[closeIdx]);
+    const open  = parseFloat(parts[openIdx]);
+    if (!close || close <= 0 || isNaN(close)) continue;
+    const change    = close - open;
+    const changePct = open > 0 ? (change / open) * 100 : 0;
+    const originalTicker = tickers.find(t =>
+      t.toUpperCase() === rawSym ||
+      t.toUpperCase().replace(/\./g, '-') === rawSym.replace(/\./g, '-')
+    ) || rawSym;
+    result[originalTicker.toUpperCase()] = {
+      ticker: originalTicker.toUpperCase(),
+      price:     Math.round(close     * 10000) / 10000,
+      change:    Math.round(change    * 10000) / 10000,
+      changePct: Math.round(changePct * 10000) / 10000,
+      name: originalTicker.toUpperCase(),
+      error: false,
+      source: 'stooq',
+      ts: Date.now(),
+    };
+  }
+  return result;
+}
+
+async function fetchPriceViaStooq(ticker) {
+  const url = `https://stooq.com/q/l/?s=${toStooqSymbol(ticker)}&f=sd2t2ohlcv&h&e=csv`;
+  const res = await fetchWithTimeout(url, 10000);
+  if (!res.ok) throw new Error('stooq HTTP ' + res.status);
+  const csv   = await res.text();
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) throw new Error('No data');
+  const header   = lines[0].toLowerCase();
+  const hasTime  = header.includes('time');
+  const openIdx  = hasTime ? 3 : 2;
+  const closeIdx = hasTime ? 6 : 5;
+  const parts    = lines[lines.length - 1].split(',');
+  const close    = parseFloat(parts[closeIdx]);
+  const open     = parseFloat(parts[openIdx]);
+  if (!close || close <= 0 || isNaN(close)) throw new Error('Invalid price');
+  const change    = close - open;
+  const changePct = open > 0 ? (change / open) * 100 : 0;
   return {
-    ticker,
-    price: Math.round(price * 10000) / 10000,
-    change: Math.round(change * 10000) / 10000,
+    ticker: ticker.toUpperCase(),
+    price:     Math.round(close     * 10000) / 10000,
+    change:    Math.round(change    * 10000) / 10000,
     changePct: Math.round(changePct * 10000) / 10000,
-    prev,
-    name: meta.longName || meta.shortName || ticker,
+    name: ticker.toUpperCase(),
+    error: false, source: 'stooq', ts: Date.now(),
   };
 }
 
 /**
- * Parse Yahoo Finance v7 quote response
- */
-function parseV7Response(ticker, json) {
-  const quoteResponse = json.quoteResponse;
-  if (!quoteResponse || !quoteResponse.result || quoteResponse.result.length === 0) return null;
-  const q = quoteResponse.result[0];
-  const price = q.regularMarketPrice;
-  if (!price || price <= 0) return null;
-  const prev = q.regularMarketPreviousClose || price;
-  const change = q.regularMarketChange || (price - prev);
-  const changePct = q.regularMarketChangePercent || (prev > 0 ? (change / prev) * 100 : 0);
-  return {
-    ticker,
-    price: Math.round(price * 10000) / 10000,
-    change: Math.round(change * 10000) / 10000,
-    changePct: Math.round(changePct * 10000) / 10000,
-    prev,
-    name: q.shortName || q.longName || ticker,
-  };
-}
-
-/**
- * Main price fetch — tries all proxies in order with individual timeouts.
- * Returns cached result if fresh enough (< 90 seconds).
- * Never throws — always returns an object (with error:true on failure).
+ * Single ticker fetch — used for add-holding validation, watchlist, etc.
  */
 async function fetchStockPrice(ticker, forceRefresh = false) {
   ticker = ticker.toUpperCase().trim();
+  const CACHE_TTL = 5 * 60 * 1000;
 
-  // Return cache if fresh
   if (!forceRefresh && stockCache[ticker] && !stockCache[ticker].error) {
-    const age = Date.now() - stockCache[ticker].ts;
-    if (age < 90_000) return stockCache[ticker]; // 90 seconds
+    if (Date.now() - stockCache[ticker].ts < CACHE_TTL) return stockCache[ticker];
   }
 
-  let lastError = null;
-
-  for (let i = 0; i < PROXY_BUILDERS.length; i++) {
-    const proxyInfo = PROXY_BUILDERS[i](ticker);
-    try {
-      const res = await fetchWithTimeout(proxyInfo.url, 7000);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      let json;
-      if (proxyInfo.isWrapped) {
-        const raw = await res.json();
-        if (!raw.contents) throw new Error('Empty allorigins response');
-        json = JSON.parse(raw.contents);
-      } else {
-        json = await res.json();
-      }
-
-      const parsed = proxyInfo.isV7 ? parseV7Response(ticker, json) : parseV8Response(ticker, json);
-      if (!parsed) throw new Error('Parse failed');
-
-      const result = { ...parsed, ts: Date.now(), source: `proxy${i+1}`, error: false };
-      stockCache[ticker] = result;
-      return result;
-
-    } catch (e) {
-      lastError = e;
-      // Small delay between proxy attempts
-      if (i < PROXY_BUILDERS.length - 1) {
-        await new Promise(r => setTimeout(r, 300));
-      }
+  // Try Alpaca single-ticker snapshot first
+  try {
+    const batch = await fetchPricesViaAlpaca([ticker]);
+    if (batch[ticker]) {
+      stockCache[ticker] = batch[ticker];
+      return batch[ticker];
     }
-  }
+  } catch(e) {}
 
-  // All proxies failed — return stale cache if available
-  if (stockCache[ticker] && !stockCache[ticker].error) {
-    return { ...stockCache[ticker], stale: true };
-  }
+  // Fallback: stooq
+  try {
+    const r = await fetchPriceViaStooq(ticker);
+    stockCache[ticker] = r;
+    return r;
+  } catch(e) {}
 
-  // Complete failure
-  const fallback = {
-    ticker,
-    price: null,
-    change: 0,
-    changePct: 0,
-    name: ticker,
-    error: true,
-    ts: Date.now(),
-    errorMsg: lastError ? lastError.message : 'Unknown error',
-  };
-  stockCache[ticker] = fallback;
-  return fallback;
+  if (stockCache[ticker]?.price) return { ...stockCache[ticker], stale: true };
+  return { ticker, price: null, change: 0, changePct: 0, name: ticker, error: true, ts: Date.now() };
 }
 
 /**
- * Fetch prices for multiple tickers with staggered requests to avoid rate limits.
- * Shows live status updates as prices come in.
+ * MAIN BATCH FETCH — renderPortfolio, loadDashboard, loadMarkets.
+ *
+ * 1. Alpaca batch snapshot (1 request, all tickers, free tier)
+ * 2. stooq batch fallback for anything Alpaca missed
+ * 3. stooq per-ticker for any still missing
  */
 async function fetchPricesBatch(tickers, onUpdate, forceRefresh = false) {
-  const results = {};
-  const BATCH_SIZE = 3;    // Concurrent requests per batch
-  const BATCH_DELAY = 400; // ms between batches
+  if (!tickers || tickers.length === 0) return {};
 
-  for (let i = 0; i < tickers.length; i += BATCH_SIZE) {
-    const batch = tickers.slice(i, i + BATCH_SIZE);
-    const batchResults = await Promise.all(
-      batch.map(t => fetchStockPrice(t, forceRefresh))
-    );
-    batchResults.forEach(r => {
-      results[r.ticker] = r;
-      if (onUpdate) onUpdate(r.ticker, r);
-    });
+  const CACHE_TTL = 5 * 60 * 1000;
+  const toFetch = forceRefresh
+    ? [...tickers]
+    : tickers.filter(t => {
+        const c = stockCache[t.toUpperCase()];
+        return !c || c.error || (Date.now() - c.ts > CACHE_TTL);
+      });
 
-    if (i + BATCH_SIZE < tickers.length) {
-      await new Promise(r => setTimeout(r, BATCH_DELAY));
+  if (toFetch.length === 0) {
+    const r = {};
+    tickers.forEach(t => { r[t.toUpperCase()] = stockCache[t.toUpperCase()]; });
+    return r;
+  }
+
+  showPriceStatus('fetching', `Fetching ${toFetch.length} price${toFetch.length > 1 ? 's' : ''}...`);
+
+  const priceMap = {};
+
+  // --- Step 1: Alpaca batch (preferred) ---
+  try {
+    const alpacaResult = await fetchPricesViaAlpaca(toFetch);
+    Object.assign(priceMap, alpacaResult);
+    Object.assign(stockCache, alpacaResult);
+    if (onUpdate) Object.values(alpacaResult).forEach(r => onUpdate(r.ticker, r));
+  } catch(e) {
+    console.warn('Alpaca batch failed:', e.message, '— trying stooq');
+  }
+
+  // --- Step 2: stooq batch for anything Alpaca missed ---
+  const missing = toFetch.filter(t => !priceMap[t.toUpperCase()] || priceMap[t.toUpperCase()].error);
+  if (missing.length > 0) {
+    try {
+      const stooqResult = await fetchPricesBatchStooq(missing);
+      Object.assign(priceMap, stooqResult);
+      Object.assign(stockCache, stooqResult);
+      if (onUpdate) Object.values(stooqResult).forEach(r => onUpdate(r.ticker, r));
+    } catch(e) {
+      console.warn('stooq batch failed:', e.message);
     }
   }
 
-  return results;
-}
+  // --- Step 3: per-ticker stooq for anything still missing ---
+  const stillMissing = toFetch.filter(t => !priceMap[t.toUpperCase()] || priceMap[t.toUpperCase()].error);
+  if (stillMissing.length > 0) {
+    showPriceStatus('fetching', `Retrying ${stillMissing.length} individually...`);
+    const fallback = await Promise.allSettled(stillMissing.map(t => fetchPriceViaStooq(t)));
+    fallback.forEach((res, i) => {
+      const key = stillMissing[i].toUpperCase();
+      const r = res.status === 'fulfilled' && res.value.price
+        ? res.value
+        : { ticker: key, price: null, change: 0, changePct: 0, name: key, error: true, ts: Date.now() };
+      priceMap[key] = r;
+      stockCache[key] = r;
+      if (onUpdate && !r.error) onUpdate(key, r);
+    });
+  }
 
+  // Fill cached values for skipped tickers
+  tickers.forEach(t => {
+    const key = t.toUpperCase();
+    if (!priceMap[key]) {
+      priceMap[key] = stockCache[key] || { ticker: key, price: null, change: 0, changePct: 0, name: key, error: true, ts: Date.now() };
+    }
+  });
+
+  return priceMap;
+}
 // ==========================================
 // AUTH FUNCTIONS
 // ==========================================
@@ -1551,7 +1632,7 @@ function onSignedIn(user) {
     if (holdings.length > 0 && document.getElementById('page-portfolio').classList.contains('active')) {
       renderPortfolio(true); // silent refresh (forceRefresh prices)
     }
-  }, 90_000);
+  }, 5 * 60 * 1000); // 5-min refresh matches stooq cache TTL
 }
 
 // ==========================================
@@ -2556,32 +2637,30 @@ async function buildChartData(range, currentValue, totalCost) {
 }
 
 async function fetchHistoricalPrices(ticker, days, interval) {
-  const end = Math.floor(Date.now() / 1000);
-  const start = end - (days * 86400);
-
-  // Try two proxy variations
-  const attempts = [
-    () => {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&period1=${start}&period2=${end}`;
-      return fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: new AbortController().signal }).then(r => r.json());
-    },
-    () => {
-      const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&period1=${start}&period2=${end}`;
-      return fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, 8000)
-        .then(r => r.json()).then(raw => JSON.parse(raw.contents));
-    }
-  ];
-
-  for (const attempt of attempts) {
-    try {
-      const data = await attempt();
-      const result = data.chart.result[0];
-      const timestamps = result.timestamp;
-      const closes = result.indicators.quote[0].close;
-      return timestamps.map((t, i) => ({ date: t, price: closes[i] || 0 })).filter(d => d.price > 0);
-    } catch (e) { continue; }
+  // Historical price fetch via stooq.com — returns CSV with date+close
+  // stooq supports date ranges via d1/d2 params (YYYYMMDD format)
+  try {
+    const now = new Date();
+    const past = new Date(now - days * 86400 * 1000);
+    const fmt = d => d.toISOString().slice(0,10).replace(/-/g,'');
+    const stooqTicker = ticker.toLowerCase().replace('.', '-') + '.us';
+    const url = `https://stooq.com/q/d/l/?s=${stooqTicker}&d1=${fmt(past)}&d2=${fmt(now)}&i=d`;
+    const res = await fetchWithTimeout(url, 10000);
+    if (!res.ok) throw new Error('stooq error');
+    const csv = await res.text();
+    const lines = csv.trim().split('\n').slice(1); // skip header
+    if (lines.length < 2) throw new Error('Not enough data');
+    // CSV: Date,Open,High,Low,Close,Volume
+    return lines.map(line => {
+      const parts = line.split(',');
+      const dateStr = parts[0]; // YYYY-MM-DD
+      const close = parseFloat(parts[4]);
+      if (!dateStr || !close || close <= 0) return null;
+      return { date: new Date(dateStr).getTime() / 1000, price: close };
+    }).filter(Boolean);
+  } catch(e) {
+    return []; // Will fall through to generateSimulatedChart
   }
-  return [];
 }
 
 function generateSimulatedChart(range, currentValue, totalCost) {
@@ -2752,33 +2831,9 @@ function renderDividendBreakdown() {
 }
 
 async function fetchDividendYield(ticker) {
-  // Use the existing price cache response (meta has dividend yield)
-  const cached = stockCache[ticker];
-  if (cached && !cached.error && cached.dividendYield !== undefined) {
-    return cached.dividendYield;
-  }
-
-  // Fetch fresh if not in cache
-  const proxies = [
-    () => {
-      const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + ticker + '?interval=1d&range=1d';
-      return fetchWithTimeout('https://corsproxy.io/?' + encodeURIComponent(url), 6000).then(r => r.json());
-    },
-    () => {
-      const url = 'https://query2.finance.yahoo.com/v8/finance/chart/' + ticker + '?interval=1d&range=1d';
-      return fetchWithTimeout('https://api.allorigins.win/get?url=' + encodeURIComponent(url), 6000)
-        .then(r => r.json()).then(raw => JSON.parse(raw.contents));
-    }
-  ];
-  for (const proxy of proxies) {
-    try {
-      const data = await proxy();
-      const meta = data.chart.result[0].meta;
-      const yld = meta.trailingAnnualDividendYield || meta.dividendYield;
-      if (yld && yld > 0) return parseFloat((yld * 100).toFixed(4));
-      return 0;
-    } catch (e) { continue; }
-  }
+  // Use hardcoded known yields — no external calls, always reliable
+  const key = ticker.toUpperCase();
+  if (KNOWN_YIELDS.hasOwnProperty(key)) return KNOWN_YIELDS[key];
   return 0;
 }
 
