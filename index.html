@@ -90,7 +90,6 @@
   }
   .auth-success.show { display: block; }
 
-  /* User avatar in header */
   .user-menu { display: flex; align-items: center; gap: 8px; cursor: pointer; }
   .user-avatar {
     width: 36px; height: 36px; border-radius: 50%;
@@ -117,7 +116,6 @@
     --card-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   }
 
-  /* ---- THEMES ---- */
   body.theme-midnight { --bg:#0a0a0f; --surface:#13131a; --surface2:#1c1c27; --border:rgba(255,255,255,0.07); --text:#f0f0f5; --muted:#6b6b80; --accent:#5b8fff; --card-gradient:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460); }
   body.theme-forest   { --bg:#0b1a0e; --surface:#111f14; --surface2:#192b1d; --border:rgba(255,255,255,0.07); --text:#e8f5e9; --muted:#5a7a5e; --green:#4caf76; --blue:#43a868; --accent:#4caf76; --card-gradient:linear-gradient(135deg,#0b2e14,#0d3b1a,#0a4520); }
   body.theme-sunset   { --bg:#12060e; --surface:#1c0d17; --surface2:#271220; --border:rgba(255,100,100,0.1); --text:#fff0f0; --muted:#7a5060; --blue:#ff6b6b; --purple:#ff9a5c; --accent:#ff6b6b; --card-gradient:linear-gradient(135deg,#2e0d1a,#3d1420,#4a1830); }
@@ -126,10 +124,8 @@
   body.theme-gold     { --bg:#0d0900; --surface:#1a1200; --surface2:#251b00; --border:rgba(245,200,66,0.1); --text:#fff8e0; --muted:#806040; --blue:#f5c842; --purple:#ffaa00; --accent:#f5c842; --card-gradient:linear-gradient(135deg,#2e1f00,#3d2a00,#4a3200); }
   body.theme-aurora   { --bg:#05080f; --surface:#0d1220; --surface2:#141c30; --border:rgba(100,255,200,0.08); --text:#e8fff5; --muted:#4a6860; --green:#00ffcc; --blue:#00ccff; --purple:#cc00ff; --accent:#00ffcc; --card-gradient:linear-gradient(135deg,#0a1f2e,#0d2040,#0a1530); }
 
-  /* Theme-aware portfolio card */
   .portfolio-card { background: var(--card-gradient) !important; }
 
-  /* Light theme specific overrides */
   body.theme-light .bottom-nav { background: rgba(245,245,247,0.92); border-top:1px solid rgba(0,0,0,0.1); }
   body.theme-light .nav-label { color: #888; }
   body.theme-light .nav-item.active .nav-label { color: var(--accent); }
@@ -142,7 +138,6 @@
   body.theme-light .stat { background: rgba(0,0,0,0.04); }
   body.theme-light .tab { background: #f0f0f5; border-color: rgba(0,0,0,0.08); color: #666; }
 
-  /* Theme picker styles */
   .theme-sheet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
   .theme-swatch {
     border-radius: 14px; padding: 10px 6px; text-align: center; cursor: pointer;
@@ -166,9 +161,6 @@
     overflow-x: hidden;
   }
 
-
-
-  /* Header */
   .header {
     padding: 8px 20px 20px;
     background: linear-gradient(180deg, var(--bg) 0%, transparent 100%);
@@ -202,12 +194,8 @@
     font-size: 14px; font-weight: 600;
   }
 
-  /* Main scroll content */
-  .content {
-    padding: 0 16px 120px;
-  }
+  .content { padding: 0 16px 120px; }
 
-  /* Portfolio Card */
   .portfolio-card {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     border-radius: var(--radius);
@@ -277,7 +265,19 @@
   .stat-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
   .stat-value { font-size: 16px; font-weight: 600; }
 
-  /* Section headers */
+  /* Price fetch status indicator */
+  .price-status-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; margin-bottom: 12px;
+    background: var(--surface2); border-radius: 10px;
+    font-size: 11px; font-weight: 600;
+  }
+  .price-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .price-status-dot.fetching { background: var(--gold); animation: pulse 1s infinite; }
+  .price-status-dot.success { background: var(--green); }
+  .price-status-dot.partial { background: var(--gold); }
+  .price-status-dot.error { background: var(--red); }
+
   .section-header {
     display: flex;
     align-items: center;
@@ -303,7 +303,6 @@
     border-radius: 20px;
   }
 
-  /* Holdings list */
   .holding-card {
     background: var(--surface);
     border-radius: 16px;
@@ -320,6 +319,15 @@
   }
 
   .holding-card:active { transform: scale(0.98); }
+
+  /* Subtle live pulse on updated cards */
+  .holding-card.price-updated {
+    animation: priceFlash 0.6s ease;
+  }
+  @keyframes priceFlash {
+    0% { border-color: rgba(0,229,160,0.5); }
+    100% { border-color: var(--border); }
+  }
 
   .holding-icon {
     width: 46px; height: 46px;
@@ -341,6 +349,18 @@
   .holding-change { font-size: 12px; font-weight: 500; }
   .holding-change.pos { color: var(--green); }
   .holding-change.neg { color: var(--red); }
+  .holding-change.loading { color: var(--muted); }
+
+  /* Skeleton shimmer for loading state */
+  .price-skeleton {
+    display: inline-block;
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    height: 14px;
+    width: 60px;
+  }
 
   .loading-dot {
     display: inline-block;
@@ -354,7 +374,6 @@
     0%, 100% { opacity: 0.3; } 50% { opacity: 1; }
   }
 
-  /* AI Suggestion Cards */
   .ai-card {
     background: var(--surface);
     border-radius: 16px;
@@ -408,7 +427,6 @@
   .confidence-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
   .confidence-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
 
-  /* News section */
   .news-card {
     background: var(--surface);
     border-radius: 16px;
@@ -450,7 +468,6 @@
   .news-impact.neg { background: rgba(255,77,109,0.15); color: var(--red); }
   .news-impact.neu { background: rgba(107,107,128,0.2); color: var(--muted); }
 
-  /* Bottom Nav */
   .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -494,7 +511,6 @@
   .nav-item.active .nav-icon { filter: none; }
   .nav-item.active .nav-label { color: var(--green); }
 
-  /* Modal / Sheet */
   .sheet-overlay {
     position: fixed; inset: 0;
     background: rgba(0,0,0,0.6);
@@ -537,7 +553,6 @@
     margin-bottom: 20px;
   }
 
-  /* Form elements */
   .input-group { margin-bottom: 16px; }
   .input-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
   .input-field {
@@ -570,7 +585,6 @@
   }
   .btn-primary:active { opacity: 0.85; }
 
-  /* AI Chat bubble */
   .ai-chat-btn {
     position: fixed;
     bottom: 90px;
@@ -591,7 +605,6 @@
     50% { transform: translateY(-4px); }
   }
 
-  /* Tabs */
   .tabs {
     display: flex;
     gap: 8px;
@@ -620,7 +633,6 @@
     border-color: rgba(91,143,255,0.3);
   }
 
-  /* AI Analysis section */
   .ai-analysis-wrapper {
     background: linear-gradient(135deg, rgba(167,139,250,0.1), rgba(91,143,255,0.1));
     border: 1px solid rgba(167,139,250,0.2);
@@ -637,13 +649,8 @@
   }
 
   .ai-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--purple); animation: pulse 1.5s infinite; }
-
   .ai-text { font-size: 14px; line-height: 1.6; color: rgba(240,240,245,0.85); }
 
-  /* Sparkline mini chart */
-  .sparkline { margin-top: 8px; }
-
-  /* Loading skeleton */
   .skeleton {
     background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
     background-size: 200% 100%;
@@ -659,7 +666,6 @@
   .page { display: none; }
   .page.active { display: block; }
 
-  /* Watch page */
   .market-overview {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -678,7 +684,6 @@
   .market-value { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
   .market-change { font-size: 12px; font-weight: 500; }
 
-  /* Toast */
   .toast {
     position: fixed;
     top: 60px;
@@ -709,8 +714,6 @@
   .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
   .empty-state p { font-size: 14px; line-height: 1.5; }
 
-
-  /* ==================== DASHBOARD ==================== */
   .chart-container {
     background: var(--surface);
     border-radius: 20px;
@@ -782,12 +785,17 @@
   .perf-bar-fill { height: 100%; border-radius: 2px; }
   .perf-pct { font-size: 13px; font-weight: 700; min-width: 52px; text-align: right; }
 
+  /* Retry button */
+  .retry-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    background: rgba(91,143,255,0.15); color: var(--blue);
+    border: 1px solid rgba(91,143,255,0.3); cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
 </style>
 </head>
 <body class="theme-midnight">
-
-
-
 
 <!-- AUTH SCREEN -->
 <div id="auth-screen">
@@ -810,7 +818,6 @@
     <div class="auth-error" id="auth-error"></div>
     <div class="auth-success" id="auth-success"></div>
 
-    <!-- Sign In Form -->
     <div id="form-signin" class="auth-form">
       <div class="auth-input-group">
         <input type="email" class="auth-input" id="signin-email" placeholder="Email address" autocomplete="email">
@@ -821,7 +828,6 @@
       <button class="btn-auth-primary" id="btn-signin" onclick="signInWithEmail()">Sign In</button>
     </div>
 
-    <!-- Sign Up Form -->
     <div id="form-signup" class="auth-form" style="display:none">
       <div class="auth-input-group">
         <input type="text" class="auth-input" id="signup-name" placeholder="Your name">
@@ -862,7 +868,6 @@
   </div>
 
   <div class="content">
-    <!-- Portfolio Summary Card -->
     <div class="portfolio-card">
       <div class="portfolio-label">Total Portfolio Value</div>
       <div class="portfolio-value" id="total-value">$0.00</div>
@@ -889,13 +894,18 @@
       </div>
     </div>
 
-    <!-- AI Analysis -->
+    <!-- Price fetch status bar -->
+    <div id="price-status-bar" style="display:none" class="price-status-bar">
+      <div class="price-status-dot fetching" id="price-status-dot"></div>
+      <span id="price-status-text">Fetching live prices...</span>
+      <button class="retry-btn" onclick="forceRefreshPrices()" id="retry-btn" style="display:none;margin-left:auto">↺ Retry</button>
+    </div>
+
     <div class="ai-analysis-wrapper" id="ai-portfolio-analysis" style="display:none">
       <div class="ai-label"><div class="ai-dot"></div> AI Portfolio Analysis</div>
       <div class="ai-text" id="ai-analysis-text">Analyzing your portfolio...</div>
     </div>
 
-    <!-- Holdings -->
     <div class="section-header">
       <div class="section-title">Holdings</div>
       <div style="display:flex;gap:8px">
@@ -929,11 +939,11 @@
   </div>
   <div class="content">
     <div style="text-align:center;padding:20px">
-  <button onclick="generateSuggestions()" style="background:linear-gradient(135deg,var(--blue),var(--purple));color:white;border:none;border-radius:14px;padding:16px 32px;font-size:16px;font-weight:600;cursor:pointer">
-    ✨ Generate AI Insights
-  </button>
-  <div style="font-size:12px;color:var(--muted);margin-top:8px">Uses ~$0.02 per analysis</div>
-</div>
+      <button onclick="generateSuggestions(true)" style="background:linear-gradient(135deg,var(--blue),var(--purple));color:white;border:none;border-radius:14px;padding:16px 32px;font-size:16px;font-weight:600;cursor:pointer">
+        ✨ Generate AI Insights
+      </button>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Uses ~$0.02 per analysis</div>
+    </div>
     <div id="suggestions-list">
       <div class="empty-state">
         <div class="icon">🤖</div>
@@ -976,7 +986,6 @@
   </div>
 </div>
 
-
 <!-- DASHBOARD PAGE -->
 <div id="page-dashboard" class="page">
   <div class="header">
@@ -986,8 +995,6 @@
     </div>
   </div>
   <div class="content">
-
-    <!-- Main Chart -->
     <div class="chart-container">
       <div class="chart-title">Portfolio Value</div>
       <div class="chart-value" id="dash-total-value">$0.00</div>
@@ -1003,7 +1010,6 @@
       <div class="chart-wrapper"><canvas id="portfolio-chart"></canvas></div>
     </div>
 
-    <!-- Quick Stats -->
     <div class="dash-stats-grid">
       <div class="dash-stat">
         <div class="dash-stat-icon">💰</div>
@@ -1030,7 +1036,6 @@
       </div>
     </div>
 
-    <!-- Dividend Income Tile -->
     <div class="chart-container" id="dash-dividend-wrap" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div>
@@ -1039,45 +1044,34 @@
         </div>
         <div style="font-size:28px">💵</div>
       </div>
-
-      <!-- Monthly / Annual toggle -->
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <button id="div-tab-monthly" onclick="switchDivView('monthly')" style="flex:1;padding:8px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(0,229,160,0.3);background:rgba(0,229,160,0.15);color:var(--green);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation">Monthly</button>
         <button id="div-tab-annual" onclick="switchDivView('annual')" style="flex:1;padding:8px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;-webkit-appearance:none;touch-action:manipulation">Annual</button>
       </div>
-
-      <!-- Big number -->
       <div style="background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(91,143,255,0.1));border:1px solid rgba(0,229,160,0.2);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center">
         <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px" id="div-period-label">Monthly Income</div>
         <div style="font-family:'DM Serif Display',serif;font-size:36px;letter-spacing:-1px;color:var(--green)" id="div-total">$0.00</div>
         <div style="font-size:12px;color:var(--muted);margin-top:4px" id="div-annual-equiv"></div>
       </div>
-
-      <!-- Per stock breakdown -->
       <div id="div-breakdown"></div>
-
       <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px;line-height:1.5">
         ⚠️ Estimates based on trailing 12-month dividend yield. Not financial advice.
       </div>
     </div>
 
-    <!-- Portfolio Allocation -->
     <div class="chart-container" id="dash-allocation-wrap" style="display:none">
       <div class="chart-title">Portfolio Allocation</div>
       <div class="allocation-bar" id="dash-alloc-bar"></div>
       <div class="allocation-legend" id="dash-alloc-legend"></div>
     </div>
 
-    <!-- Performance Table -->
     <div class="chart-container" id="dash-perf-wrap" style="display:none">
       <div class="chart-title">Performance by Stock</div>
       <div id="dash-perf-list"></div>
     </div>
-
   </div>
 </div>
 
-<!-- Bottom Navigation -->
 <nav class="bottom-nav">
   <div class="nav-item active" onclick="switchPage('portfolio', this)">
     <div class="nav-icon">📈</div>
@@ -1105,7 +1099,6 @@
   </div>
 </nav>
 
-<!-- AI Chat Button -->
 <button class="ai-chat-btn" onclick="openAIChat()">✨</button>
 
 <!-- ADD STOCK SHEET -->
@@ -1174,9 +1167,14 @@
       <span style="font-weight:500">Change Theme</span>
       <span style="margin-left:auto;color:var(--muted)">›</span>
     </div>
-    <div onclick="refreshPortfolio()" style="padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;border-bottom:1px solid var(--border)">
+    <div onclick="forceRefreshPrices();closeSheet('user')" style="padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;border-bottom:1px solid var(--border)">
       <span style="font-size:20px">🔄</span>
-      <span style="font-weight:500">Refresh Portfolio</span>
+      <span style="font-weight:500">Refresh Prices</span>
+      <span style="margin-left:auto;color:var(--muted)">›</span>
+    </div>
+    <div onclick="reloadFromSupabase();closeSheet('user')" style="padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer">
+      <span style="font-size:20px">☁️</span>
+      <span style="font-weight:500">Reload Portfolio</span>
       <span style="margin-left:auto;color:var(--muted)">›</span>
     </div>
   </div>
@@ -1217,7 +1215,6 @@
     </button>
   </div>
 
-  <!-- Step 2: Preview detected stocks -->
   <div id="screenshot-step-2" style="display:none">
     <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Detected Stocks</div>
     <div id="screenshot-detected-list" style="margin-bottom:16px"></div>
@@ -1231,7 +1228,6 @@
     </div>
   </div>
 
-  <!-- Loading state -->
   <div id="screenshot-loading" style="display:none;text-align:center;padding:40px 0">
     <div style="font-size:48px;margin-bottom:16px">🤖</div>
     <div style="font-weight:600;font-size:16px;margin-bottom:8px">Analyzing screenshot...</div>
@@ -1239,13 +1235,9 @@
   </div>
 </div>
 
-
-
 <div class="toast" id="toast"></div>
 
 <script>
-
-// ==========================================
 // ==========================================
 // SUPABASE CONFIG
 // ==========================================
@@ -1259,9 +1251,195 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let holdings = [];
 let watchlist = JSON.parse(localStorage.getItem('stockwise_watchlist') || '["SPY","QQQ","BRK.B"]');
-let stockCache = {};
+let stockCache = {}; // { ticker: { price, change, changePct, name, ts, source } }
 let allSuggestions = [];
 let currentFilter = 'all';
+let refreshInterval = null;
+
+// ==========================================
+// ===  ROBUST PRICE FETCHING ENGINE  ======
+// ==========================================
+
+/**
+ * All CORS proxy builders — tried in order, fastest first.
+ * Each returns a full URL string to fetch from.
+ */
+const PROXY_BUILDERS = [
+  // 1. corsproxy.io — usually fastest
+  (ticker) => {
+    const base = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d&includePrePost=false`;
+    return { url: `https://corsproxy.io/?${encodeURIComponent(base)}`, isWrapped: false };
+  },
+  // 2. allorigins.win — JSON wrapper
+  (ticker) => {
+    const base = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
+    return { url: `https://api.allorigins.win/get?url=${encodeURIComponent(base)}`, isWrapped: true };
+  },
+  // 3. Yahoo v7 quote endpoint via corsproxy
+  (ticker) => {
+    const base = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}&fields=regularMarketPrice,regularMarketPreviousClose,regularMarketChange,regularMarketChangePercent,shortName`;
+    return { url: `https://corsproxy.io/?${encodeURIComponent(base)}`, isWrapped: false, isV7: true };
+  },
+  // 4. v7 via allorigins
+  (ticker) => {
+    const base = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}&fields=regularMarketPrice,regularMarketPreviousClose,regularMarketChange,regularMarketChangePercent,shortName`;
+    return { url: `https://api.allorigins.win/get?url=${encodeURIComponent(base)}`, isWrapped: true, isV7: true };
+  },
+];
+
+/**
+ * Fetch with timeout — compatible with all browsers (no AbortSignal.timeout)
+ */
+function fetchWithTimeout(url, ms = 7000) {
+  return new Promise((resolve, reject) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error('Timeout'));
+    }, ms);
+    fetch(url, { signal: controller.signal })
+      .then(r => { clearTimeout(timer); resolve(r); })
+      .catch(e => { clearTimeout(timer); reject(e); });
+  });
+}
+
+/**
+ * Parse Yahoo Finance v8 chart response
+ */
+function parseV8Response(ticker, json) {
+  const result = json.chart && json.chart.result && json.chart.result[0];
+  if (!result) return null;
+  const meta = result.meta;
+  const price = meta.regularMarketPrice || meta.chartPreviousClose;
+  if (!price || price <= 0) return null;
+  const prev = meta.chartPreviousClose || meta.previousClose || price;
+  const change = price - prev;
+  const changePct = prev > 0 ? (change / prev) * 100 : 0;
+  return {
+    ticker,
+    price: Math.round(price * 10000) / 10000,
+    change: Math.round(change * 10000) / 10000,
+    changePct: Math.round(changePct * 10000) / 10000,
+    prev,
+    name: meta.longName || meta.shortName || ticker,
+  };
+}
+
+/**
+ * Parse Yahoo Finance v7 quote response
+ */
+function parseV7Response(ticker, json) {
+  const quoteResponse = json.quoteResponse;
+  if (!quoteResponse || !quoteResponse.result || quoteResponse.result.length === 0) return null;
+  const q = quoteResponse.result[0];
+  const price = q.regularMarketPrice;
+  if (!price || price <= 0) return null;
+  const prev = q.regularMarketPreviousClose || price;
+  const change = q.regularMarketChange || (price - prev);
+  const changePct = q.regularMarketChangePercent || (prev > 0 ? (change / prev) * 100 : 0);
+  return {
+    ticker,
+    price: Math.round(price * 10000) / 10000,
+    change: Math.round(change * 10000) / 10000,
+    changePct: Math.round(changePct * 10000) / 10000,
+    prev,
+    name: q.shortName || q.longName || ticker,
+  };
+}
+
+/**
+ * Main price fetch — tries all proxies in order with individual timeouts.
+ * Returns cached result if fresh enough (< 90 seconds).
+ * Never throws — always returns an object (with error:true on failure).
+ */
+async function fetchStockPrice(ticker, forceRefresh = false) {
+  ticker = ticker.toUpperCase().trim();
+
+  // Return cache if fresh
+  if (!forceRefresh && stockCache[ticker] && !stockCache[ticker].error) {
+    const age = Date.now() - stockCache[ticker].ts;
+    if (age < 90_000) return stockCache[ticker]; // 90 seconds
+  }
+
+  let lastError = null;
+
+  for (let i = 0; i < PROXY_BUILDERS.length; i++) {
+    const proxyInfo = PROXY_BUILDERS[i](ticker);
+    try {
+      const res = await fetchWithTimeout(proxyInfo.url, 7000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      let json;
+      if (proxyInfo.isWrapped) {
+        const raw = await res.json();
+        if (!raw.contents) throw new Error('Empty allorigins response');
+        json = JSON.parse(raw.contents);
+      } else {
+        json = await res.json();
+      }
+
+      const parsed = proxyInfo.isV7 ? parseV7Response(ticker, json) : parseV8Response(ticker, json);
+      if (!parsed) throw new Error('Parse failed');
+
+      const result = { ...parsed, ts: Date.now(), source: `proxy${i+1}`, error: false };
+      stockCache[ticker] = result;
+      return result;
+
+    } catch (e) {
+      lastError = e;
+      // Small delay between proxy attempts
+      if (i < PROXY_BUILDERS.length - 1) {
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+  }
+
+  // All proxies failed — return stale cache if available
+  if (stockCache[ticker] && !stockCache[ticker].error) {
+    return { ...stockCache[ticker], stale: true };
+  }
+
+  // Complete failure
+  const fallback = {
+    ticker,
+    price: null,
+    change: 0,
+    changePct: 0,
+    name: ticker,
+    error: true,
+    ts: Date.now(),
+    errorMsg: lastError ? lastError.message : 'Unknown error',
+  };
+  stockCache[ticker] = fallback;
+  return fallback;
+}
+
+/**
+ * Fetch prices for multiple tickers with staggered requests to avoid rate limits.
+ * Shows live status updates as prices come in.
+ */
+async function fetchPricesBatch(tickers, onUpdate, forceRefresh = false) {
+  const results = {};
+  const BATCH_SIZE = 3;    // Concurrent requests per batch
+  const BATCH_DELAY = 400; // ms between batches
+
+  for (let i = 0; i < tickers.length; i += BATCH_SIZE) {
+    const batch = tickers.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map(t => fetchStockPrice(t, forceRefresh))
+    );
+    batchResults.forEach(r => {
+      results[r.ticker] = r;
+      if (onUpdate) onUpdate(r.ticker, r);
+    });
+
+    if (i + BATCH_SIZE < tickers.length) {
+      await new Promise(r => setTimeout(r, BATCH_DELAY));
+    }
+  }
+
+  return results;
+}
 
 // ==========================================
 // AUTH FUNCTIONS
@@ -1321,10 +1499,7 @@ async function signUpWithEmail() {
   if (password.length < 6) { showAuthError('Password must be at least 6 characters'); return; }
   const btn = document.getElementById('btn-signup');
   btn.textContent = 'Creating account...'; btn.disabled = true;
-  const { data, error } = await sb.auth.signUp({
-    email, password,
-    options: { data: { full_name: name } }
-  });
+  const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name } } });
   btn.textContent = 'Create Account'; btn.disabled = false;
   if (error) { showAuthError(error.message); return; }
   if (data.user && !data.session) {
@@ -1347,6 +1522,7 @@ async function signOut() {
   currentUser = null;
   holdings = [];
   allSuggestions = [];
+  if (refreshInterval) clearInterval(refreshInterval);
   showAuthScreen();
   showToast('Signed out');
 }
@@ -1354,7 +1530,7 @@ async function signOut() {
 function onSignedIn(user) {
   currentUser = user;
   const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2);
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   const avatarEl = document.getElementById('user-avatar-text');
   const avatarImg = document.getElementById('user-avatar-img');
   if (avatarEl) avatarEl.textContent = initials;
@@ -1368,6 +1544,14 @@ function onSignedIn(user) {
   showAppScreen();
   loadSavedTheme();
   loadHoldingsFromSupabase();
+
+  // Auto-refresh every 90 seconds
+  if (refreshInterval) clearInterval(refreshInterval);
+  refreshInterval = setInterval(() => {
+    if (holdings.length > 0 && document.getElementById('page-portfolio').classList.contains('active')) {
+      renderPortfolio(true); // silent refresh (forceRefresh prices)
+    }
+  }, 90_000);
 }
 
 // ==========================================
@@ -1387,15 +1571,20 @@ async function loadHoldingsFromSupabase() {
       ticker: r.ticker,
       shares: parseFloat(r.shares),
       cost: parseFloat(r.cost),
-      addedAt: r.added_at
+      addedAt: r.added_at,
     }));
     showToast('✅ Portfolio loaded (' + holdings.length + ' holdings)');
     renderPortfolio();
-    //if (holdings.length > 0) generateSuggestions();
-  } catch(e) {
+  } catch (e) {
     showToast('⚠️ Could not load portfolio');
     renderPortfolio();
   }
+}
+
+function reloadFromSupabase() {
+  stockCache = {};
+  loadHoldingsFromSupabase();
+  showToast('☁️ Reloading from cloud...');
 }
 
 async function addHoldingToSupabase(holding) {
@@ -1404,43 +1593,31 @@ async function addHoldingToSupabase(holding) {
     user_id: currentUser.id,
     ticker: holding.ticker,
     shares: holding.shares,
-    cost: holding.cost
+    cost: holding.cost,
   }).select().single();
   if (error) throw error;
   return data;
 }
 
 async function deleteHoldingFromSupabase(holdingId) {
-  if (!currentUser) { throw new Error('Not logged in'); }
-  if (!holdingId) { throw new Error('No holding ID provided'); }
-  console.log('Deleting holding ID:', holdingId, 'for user:', currentUser.id);
+  if (!currentUser) throw new Error('Not logged in');
+  if (!holdingId) throw new Error('No holding ID');
   const { data, error } = await sb.from('holdings')
     .delete()
     .eq('id', holdingId)
     .eq('user_id', currentUser.id)
     .select();
-  console.log('Delete result:', data, error);
   if (error) throw error;
 }
 
 async function updateHoldingInSupabase(holdingId, shares, cost) {
   if (!currentUser) return;
-  const { error } = await sb.from('holdings').update({ shares, cost }).eq('id', holdingId).eq('user_id', currentUser.id);
+  const { error } = await sb.from('holdings')
+    .update({ shares, cost })
+    .eq('id', holdingId)
+    .eq('user_id', currentUser.id);
   if (error) throw error;
 }
-
-function saveHoldings() { /* handled by Supabase */ }
-function addHoldingToSheet(h) { return addHoldingToSupabase(h); }
-function deleteHoldingFromSheet(ticker) {
-  const h = holdings.find(x => x.ticker === ticker);
-  if (h && h.id) return deleteHoldingFromSupabase(h.id);
-}
-function updateHoldingInSheet(ticker, shares, cost) {
-  const h = holdings.find(x => x.ticker === ticker);
-  if (h && h.id) return updateHoldingInSupabase(h.id, shares, cost);
-}
-
-
 
 // ==========================================
 // PAGE NAVIGATION
@@ -1464,17 +1641,14 @@ function openAddSheet() {
   document.getElementById('add-sheet').classList.add('open');
   document.getElementById('add-ticker').focus();
 }
-
 function openWatchlistSheet() {
   document.getElementById('watchlist-overlay').classList.add('open');
   document.getElementById('watchlist-sheet').classList.add('open');
 }
-
 function openAIChat() {
   document.getElementById('ai-overlay').classList.add('open');
   document.getElementById('ai-sheet').classList.add('open');
 }
-
 function closeSheet(name) {
   document.getElementById(name + '-overlay').classList.remove('open');
   document.getElementById(name + '-sheet').classList.remove('open');
@@ -1483,80 +1657,38 @@ function closeSheet(name) {
 // ==========================================
 // TOAST
 // ==========================================
+let toastTimer = null;
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 
 // ==========================================
-// STOCK PRICE (Multi-source with fallbacks)
+// PRICE STATUS BAR
 // ==========================================
-async function fetchStockPrice(ticker) {
-  if (stockCache[ticker] && Date.now() - stockCache[ticker].ts < 60000) {
-    return stockCache[ticker];
+function showPriceStatus(state, text) {
+  const bar = document.getElementById('price-status-bar');
+  const dot = document.getElementById('price-status-dot');
+  const txt = document.getElementById('price-status-text');
+  const retryBtn = document.getElementById('retry-btn');
+  if (!bar) return;
+  bar.style.display = 'flex';
+  dot.className = 'price-status-dot ' + state;
+  txt.textContent = text;
+  retryBtn.style.display = (state === 'error' || state === 'partial') ? 'block' : 'none';
+  if (state === 'success') {
+    setTimeout(() => { bar.style.display = 'none'; }, 3000);
   }
-
-  // Try multiple proxies in order
-  const proxies = [
-    () => fetchViaCorsproxy(ticker),
-    () => fetchViaAllorigins(ticker),
-    () => fetchViaFinanceAPI(ticker),
-  ];
-
-  for (const attempt of proxies) {
-    try {
-      const result = await attempt();
-      if (result && result.price) {
-        stockCache[ticker] = { ...result, ts: Date.now() };
-        return stockCache[ticker];
-      }
-    } catch (e) {}
-  }
-
-  return { ticker, price: null, change: 0, changePct: 0, name: ticker, error: true, ts: Date.now() };
 }
 
-async function fetchViaCorsproxy(ticker) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=2d`;
-  const proxy = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-  const res = await fetch(proxy, { signal: AbortSignal.timeout(6000) });
-  const parsed = await res.json();
-  return extractYahooData(ticker, parsed);
-}
-
-async function fetchViaAllorigins(ticker) {
-  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=2d`;
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  const res = await fetch(proxy, { signal: AbortSignal.timeout(6000) });
-  const data = await res.json();
-  const parsed = JSON.parse(data.contents);
-  return extractYahooData(ticker, parsed);
-}
-
-async function fetchViaFinanceAPI(ticker) {
-  // Fallback: use Frankfurter-style free stock API
-  const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=demo`, { signal: AbortSignal.timeout(6000) });
-  const data = await res.json();
-  if (data && data.c && data.c > 0) {
-    const price = data.c;
-    const prev = data.pc;
-    const change = price - prev;
-    const changePct = (change / prev) * 100;
-    return { ticker, price, change, changePct, prev, name: ticker };
-  }
-  throw new Error('No data');
-}
-
-function extractYahooData(ticker, parsed) {
-  const meta = parsed.chart.result[0].meta;
-  const price = meta.regularMarketPrice;
-  const prev = meta.chartPreviousClose || meta.previousClose;
-  if (!price) throw new Error('No price');
-  const change = price - prev;
-  const changePct = (change / prev) * 100;
-  return { ticker, price, change, changePct, prev, name: meta.longName || meta.shortName || ticker };
+function forceRefreshPrices() {
+  // Clear all cache
+  Object.keys(stockCache).forEach(k => delete stockCache[k]);
+  showToast('🔄 Refreshing live prices...');
+  renderPortfolio(true);
 }
 
 // ==========================================
@@ -1568,17 +1700,26 @@ async function addHolding() {
   const cost = parseFloat(document.getElementById('add-cost').value);
   if (!ticker || !shares || !cost) { showToast('⚠️ Please fill all fields'); return; }
   if (holdings.find(h => h.ticker === ticker)) { showToast('Already in portfolio'); return; }
+
   const btn = document.querySelector('#add-sheet .btn-primary');
-  btn.textContent = 'Fetching price...';
+  btn.textContent = 'Verifying ticker...';
   btn.disabled = true;
-  const stock = await fetchStockPrice(ticker);
-  if (stock.error || !stock.price) { showToast('❌ Check ticker & internet connection'); btn.textContent = 'Add to Portfolio'; btn.disabled = false; return; }
-  const newHolding = { ticker, shares, cost, addedAt: Date.now() };
+
+  const stock = await fetchStockPrice(ticker, true);
+  if (stock.error || !stock.price) {
+    showToast('❌ Ticker not found — check symbol & connection');
+    btn.textContent = 'Add to Portfolio';
+    btn.disabled = false;
+    return;
+  }
+
+  const newHolding = { ticker, shares, cost };
   btn.textContent = 'Saving...';
   try {
     const saved = await addHoldingToSupabase(newHolding);
     if (saved) newHolding.id = saved.id;
-  } catch(e) {}
+  } catch (e) {}
+
   holdings.push(newHolding);
   closeSheet('add');
   document.getElementById('add-ticker').value = '';
@@ -1586,19 +1727,15 @@ async function addHolding() {
   document.getElementById('add-cost').value = '';
   btn.textContent = 'Add to Portfolio';
   btn.disabled = false;
-  showToast('✅ ' + ticker + ' saved to Google Sheets!');
+
+  showToast('✅ ' + ticker + ' added — $' + stock.price.toFixed(2) + ' per share');
   renderPortfolio();
-  generateSuggestions();
-}
-
-function saveHoldings() {
-  // Data is saved directly to Google Sheets
 }
 
 // ==========================================
-// RENDER PORTFOLIO
+// RENDER PORTFOLIO — Progressive update
 // ==========================================
-async function renderPortfolio() {
+async function renderPortfolio(forceRefresh = false) {
   if (holdings.length === 0) {
     document.getElementById('holdings-list').innerHTML = `
       <div class="empty-state">
@@ -1612,66 +1749,182 @@ async function renderPortfolio() {
     document.getElementById('total-return').textContent = '—';
     document.getElementById('last-updated').textContent = '—';
     document.getElementById('ai-portfolio-analysis').style.display = 'none';
+    const bar = document.getElementById('price-status-bar');
+    if (bar) bar.style.display = 'none';
     return;
   }
 
-  // Show skeleton
   const container = document.getElementById('holdings-list');
-  container.innerHTML = holdings.map(() => `<div class="skeleton" style="height:78px;margin-bottom:10px;border-radius:16px"></div>`).join('');
-
-  // Fetch all prices
-  const prices = await Promise.all(holdings.map(h => fetchStockPrice(h.ticker)));
-  const priceMap = {};
-  prices.forEach(p => priceMap[p.ticker] = p);
-
-  let totalValue = 0, totalCost = 0, totalDayChange = 0;
   const colors = ['#5b8fff','#a78bfa','#00e5a0','#f5c842','#ff4d6d','#38bdf8','#fb7185','#34d399'];
 
-  container.innerHTML = '';
-  holdings.forEach((h, i) => {
-    const p = priceMap[h.ticker];
-    const value = p.price ? p.price * h.shares : h.cost * h.shares;
-    const costBasis = h.cost * h.shares;
-    const gain = value - costBasis;
-    const gainPct = (gain / costBasis) * 100;
-    const dayGain = p.change ? p.change * h.shares : 0;
-    totalValue += value;
-    totalCost += costBasis;
-    totalDayChange += dayGain;
+  // Show skeleton only on first load (no cache at all)
+  const hasAnyCached = holdings.some(h => stockCache[h.ticker] && !stockCache[h.ticker].error);
+  if (!hasAnyCached) {
+    container.innerHTML = holdings.map(() =>
+      `<div class="skeleton" style="height:78px;margin-bottom:10px;border-radius:16px"></div>`
+    ).join('');
+    showPriceStatus('fetching', `Fetching ${holdings.length} stock price${holdings.length > 1 ? 's' : ''}...`);
+  } else {
+    // Render immediately with cached prices while refreshing
+    renderHoldingCards(container, holdings, colors, stockCache);
+    updatePortfolioSummary(holdings, stockCache);
+    if (forceRefresh) {
+      showPriceStatus('fetching', 'Refreshing prices...');
+    }
+  }
 
-    const color = colors[i % colors.length];
-    const card = document.createElement('div');
-    card.className = 'holding-card';
-    card.innerHTML = `
-      <div class="holding-icon" style="color:${color}">${h.ticker.substring(0,2)}</div>
-      <div class="holding-info">
-        <div class="holding-ticker">${h.ticker}</div>
-        <div class="holding-name">${p.name || h.ticker} · ${h.shares} shares</div>
-      </div>
-      <div class="holding-right">
-        <div class="holding-value">${p.price ? '$'+p.price.toFixed(2) : '—'}</div>
-        <div class="holding-change ${p.changePct >= 0 ? 'pos' : 'neg'}">
-          ${p.changePct >= 0 ? '▲' : '▼'} ${Math.abs(p.changePct).toFixed(2)}%
-        </div>
-      </div>`;
-    card.onclick = () => showHoldingDetail(h, p, gain, gainPct);
+  // Fetch prices with progressive updates
+  let fetchedCount = 0;
+  let errorCount = 0;
+
+  await fetchPricesBatch(
+    holdings.map(h => h.ticker),
+    (ticker, result) => {
+      // Update this single card immediately when its price arrives
+      fetchedCount++;
+      if (result.error) errorCount++;
+
+      // Progressively update the status bar
+      const remaining = holdings.length - fetchedCount;
+      if (remaining > 0) {
+        showPriceStatus('fetching', `Got ${fetchedCount}/${holdings.length} prices...`);
+      }
+
+      // Re-render only the specific card that just got a price
+      const cardId = `holding-card-${ticker}`;
+      const existingCard = document.getElementById(cardId);
+      if (existingCard) {
+        const h = holdings.find(x => x.ticker === ticker);
+        if (h) {
+          const newCard = buildHoldingCard(h, result, colors[holdings.indexOf(h) % colors.length]);
+          newCard.id = cardId;
+          existingCard.replaceWith(newCard);
+        }
+      } else {
+        // Cards don't exist yet — do a full render after all fetches complete
+      }
+
+      // Update summary totals progressively
+      updatePortfolioSummary(holdings, stockCache);
+    },
+    forceRefresh
+  );
+
+  // Final render with all prices
+  renderHoldingCards(container, holdings, colors, stockCache);
+  updatePortfolioSummary(holdings, stockCache);
+
+  // Update status
+  if (errorCount === 0) {
+    showPriceStatus('success', `All ${holdings.length} prices updated ✓`);
+  } else if (errorCount < holdings.length) {
+    showPriceStatus('partial', `${holdings.length - errorCount}/${holdings.length} prices loaded — ${errorCount} failed`);
+  } else {
+    showPriceStatus('error', 'Could not fetch prices — tap to retry');
+  }
+
+  document.getElementById('last-updated').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function buildHoldingCard(h, p, color) {
+  const value = (p && p.price) ? p.price * h.shares : null;
+  const costBasis = h.cost * h.shares;
+  const gain = value !== null ? value - costBasis : null;
+  const gainPct = gain !== null ? (gain / costBasis) * 100 : null;
+
+  const card = document.createElement('div');
+  card.className = 'holding-card';
+  card.id = `holding-card-${h.ticker}`;
+
+  let priceHTML, changeHTML;
+
+  if (p && p.error && !p.price) {
+    priceHTML = `<div class="holding-value" style="color:var(--muted);font-size:12px">Unavailable</div>`;
+    changeHTML = `<div class="holding-change loading">⚠ No data</div>`;
+  } else if (p && p.stale) {
+    priceHTML = `<div class="holding-value">$${p.price.toFixed(2)} <span style="font-size:9px;color:var(--muted)">stale</span></div>`;
+    changeHTML = `<div class="holding-change ${p.changePct >= 0 ? 'pos' : 'neg'}">${p.changePct >= 0 ? '▲' : '▼'} ${Math.abs(p.changePct).toFixed(2)}%</div>`;
+  } else if (p && p.price) {
+    priceHTML = `<div class="holding-value">$${p.price.toFixed(2)}</div>`;
+    changeHTML = `<div class="holding-change ${p.changePct >= 0 ? 'pos' : 'neg'}">${p.changePct >= 0 ? '▲' : '▼'} ${Math.abs(p.changePct).toFixed(2)}%</div>`;
+  } else {
+    priceHTML = `<div class="holding-value"><span class="price-skeleton"></span></div>`;
+    changeHTML = `<div class="holding-change loading">Loading...</div>`;
+  }
+
+  card.innerHTML = `
+    <div class="holding-icon" style="color:${color}">${h.ticker.substring(0, 2)}</div>
+    <div class="holding-info">
+      <div class="holding-ticker">${h.ticker}</div>
+      <div class="holding-name">${(p && p.name) ? p.name : h.ticker} · ${h.shares} shares</div>
+    </div>
+    <div class="holding-right">
+      ${priceHTML}
+      ${changeHTML}
+    </div>`;
+
+  card.onclick = () => {
+    const pData = stockCache[h.ticker];
+    const v = pData && pData.price ? pData.price * h.shares : h.cost * h.shares;
+    const cb = h.cost * h.shares;
+    const g = v - cb;
+    const gp = (g / cb) * 100;
+    showHoldingDetail(h, pData || {}, g, gp);
+  };
+
+  return card;
+}
+
+function renderHoldingCards(container, holdingsList, colors, priceMap) {
+  container.innerHTML = '';
+  holdingsList.forEach((h, i) => {
+    const p = priceMap[h.ticker];
+    const card = buildHoldingCard(h, p, colors[i % colors.length]);
     container.appendChild(card);
   });
+}
 
-  // Update summary
+function updatePortfolioSummary(holdingsList, priceMap) {
+  let totalValue = 0, totalCost = 0, totalDayChange = 0;
+  let hasAnyPrice = false;
+
+  holdingsList.forEach(h => {
+    const p = priceMap[h.ticker];
+    const cost = h.cost * h.shares;
+    totalCost += cost;
+    if (p && p.price && !p.error) {
+      totalValue += p.price * h.shares;
+      totalDayChange += (p.change || 0) * h.shares;
+      hasAnyPrice = true;
+    } else {
+      // Fall back to cost basis for missing prices
+      totalValue += cost;
+    }
+  });
+
   const totalGain = totalValue - totalCost;
-  const totalGainPct = (totalGain / totalCost) * 100;
-  const dayPct = (totalDayChange / (totalValue - totalDayChange)) * 100;
+  const totalGainPct = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
+  const prevValue = totalValue - totalDayChange;
+  const dayPct = prevValue > 0 ? (totalDayChange / prevValue) * 100 : 0;
 
-  document.getElementById('total-value').textContent = '$' + totalValue.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('total-value').textContent = '$' + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   const changeEl = document.getElementById('total-change');
   const isPos = totalDayChange >= 0;
   changeEl.className = 'portfolio-change' + (isPos ? '' : ' negative');
-  changeEl.innerHTML = `<span>${isPos ? '▲' : '▼'}</span><span id="change-text">${isPos ? '+' : ''}$${Math.abs(totalDayChange).toFixed(2)} (${Math.abs(dayPct).toFixed(2)}%) Today</span>`;
-  document.getElementById('days-gain').innerHTML = `<span style="color:${totalDayChange>=0?'var(--green)':'var(--red)'}">${totalDayChange>=0?'+':'-'}$${Math.abs(totalDayChange).toFixed(2)}</span>`;
-  document.getElementById('total-return').innerHTML = `<span style="color:${totalGain>=0?'var(--green)':'var(--red)'}">${totalGain>=0?'+':'-'}$${Math.abs(totalGain).toFixed(2)}</span>`;
-  document.getElementById('holdings-count').textContent = holdings.length;
-  document.getElementById('last-updated').textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  changeEl.innerHTML = `<span>${isPos ? '▲' : '▼'}</span><span id="change-text">${isPos ? '+' : '-'}$${Math.abs(totalDayChange).toFixed(2)} (${Math.abs(dayPct).toFixed(2)}%) Today</span>`;
+
+  const daysGainEl = document.getElementById('days-gain');
+  daysGainEl.innerHTML = hasAnyPrice
+    ? `<span style="color:${totalDayChange >= 0 ? 'var(--green)' : 'var(--red)'}">${totalDayChange >= 0 ? '+' : '-'}$${Math.abs(totalDayChange).toFixed(2)}</span>`
+    : '—';
+
+  const totalReturnEl = document.getElementById('total-return');
+  totalReturnEl.innerHTML = hasAnyPrice
+    ? `<span style="color:${totalGain >= 0 ? 'var(--green)' : 'var(--red)'}">${totalGain >= 0 ? '+' : '-'}$${Math.abs(totalGain).toFixed(2)}</span>`
+    : '—';
+
+  document.getElementById('holdings-count').textContent = holdingsList.length;
 }
 
 // ==========================================
@@ -1691,22 +1944,24 @@ function showHoldingDetail(h, p, gain, gainPct) {
       <button onclick="removeHolding('${h.ticker}')" style="background:rgba(255,77,109,0.15);color:var(--red);border:none;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">🗑 Remove</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-      <div class="stat"><div class="stat-label">Current Price</div><div class="stat-value">${p.price ? '$'+p.price.toFixed(2) : '—'}</div></div>
-      <div class="stat"><div class="stat-label">Total Value</div><div class="stat-value">${p.price ? '$'+(p.price*h.shares).toFixed(2) : '—'}</div></div>
+      <div class="stat"><div class="stat-label">Current Price</div><div class="stat-value">${p.price ? '$' + p.price.toFixed(2) : '—'}</div></div>
+      <div class="stat"><div class="stat-label">Total Value</div><div class="stat-value">${p.price ? '$' + (p.price * h.shares).toFixed(2) : '—'}</div></div>
+      <div class="stat"><div class="stat-label">Day Change</div><div class="stat-value" style="color:${p.changePct >= 0 ? 'var(--green)' : 'var(--red)'}">${p.changePct >= 0 ? '+' : ''}${(p.changePct || 0).toFixed(2)}%</div></div>
+      <div class="stat"><div class="stat-label">Avg Cost</div><div class="stat-value">$${h.cost.toFixed(2)}</div></div>
     </div>
-    <div style="background:${isProfit?'rgba(0,229,160,0.1)':'rgba(255,77,109,0.1)'};border:1px solid ${isProfit?'rgba(0,229,160,0.3)':'rgba(255,77,109,0.3)'};border-radius:14px;padding:16px;margin-bottom:20px">
+    <div style="background:${isProfit ? 'rgba(0,229,160,0.1)' : 'rgba(255,77,109,0.1)'};border:1px solid ${isProfit ? 'rgba(0,229,160,0.3)' : 'rgba(255,77,109,0.3)'};border-radius:14px;padding:16px;margin-bottom:20px">
       <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Total P&L</div>
-      <div style="font-size:28px;font-weight:700;color:${isProfit?'var(--green)':'var(--red)'}">${isProfit?'+':'-'}$${Math.abs(gain).toFixed(2)}</div>
-      <div style="font-size:14px;color:${isProfit?'var(--green)':'var(--red)'}">${isProfit?'+':''}${gainPct.toFixed(2)}%</div>
+      <div style="font-size:28px;font-weight:700;color:${isProfit ? 'var(--green)' : 'var(--red)'}">${isProfit ? '+' : '-'}$${Math.abs(gain).toFixed(2)}</div>
+      <div style="font-size:14px;color:${isProfit ? 'var(--green)' : 'var(--red)'}">${isProfit ? '+' : ''}${gainPct.toFixed(2)}%</div>
     </div>
     <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">✏️ Edit Position</div>
     <div class="input-group">
       <div class="input-label">Shares Held</div>
-      <input type="number" class="input-field" id="edit-shares" value="${h.shares}" step="0.001" placeholder="Number of shares">
+      <input type="number" class="input-field" id="edit-shares" value="${h.shares}" step="0.001">
     </div>
     <div class="input-group">
       <div class="input-label">Average Cost Per Share ($)</div>
-      <input type="number" class="input-field" id="edit-cost" value="${h.cost}" step="0.01" placeholder="Average cost">
+      <input type="number" class="input-field" id="edit-cost" value="${h.cost}" step="0.01">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
       <button onclick="quickAction('${h.ticker}', 'buy')" style="background:rgba(0,229,160,0.15);color:var(--green);border:1px solid rgba(0,229,160,0.3);padding:12px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">📈 Bought More</button>
@@ -1758,51 +2013,41 @@ async function saveEditHolding(ticker) {
     holdings[idx].cost = newCost;
   }
   try {
-    await updateHoldingInSheet(ticker, newShares, newCost);
-    showToast('✅ ' + ticker + ' updated in Google Sheets!');
-  } catch(e) {
-    showToast('⚠️ Saved locally, sync failed');
+    await updateHoldingInSupabase(holdings[idx].id, newShares, newCost);
+    showToast('✅ ' + ticker + ' updated!');
+  } catch (e) {
+    showToast('⚠️ Saved locally, cloud sync failed');
   }
   closeSheet('add');
   resetAddSheet();
   renderPortfolio();
-  generateSuggestions();
 }
 
 async function removeHolding(ticker) {
   const holding = holdings.find(h => h.ticker === ticker);
   if (!holding) { showToast('Could not find ' + ticker); return; }
-
-  console.log('Removing holding:', holding);
-
   closeSheet('add');
   showToast('🗑 Removing ' + ticker + '...');
-
   try {
     if (!holding.id) {
-      // No local ID — query Supabase directly by ticker
-      console.log('No local ID, querying Supabase for ticker:', ticker);
       const { data, error } = await sb.from('holdings')
         .delete()
         .eq('ticker', ticker)
         .eq('user_id', currentUser.id)
         .select();
-      console.log('Direct delete result:', data, error);
       if (error) throw error;
     } else {
       await deleteHoldingFromSupabase(holding.id);
     }
     holdings = holdings.filter(h => h.ticker !== ticker);
+    delete stockCache[ticker];
     showToast('✅ ' + ticker + ' removed!');
-  } catch(e) {
-    console.error('Delete error:', e);
+  } catch (e) {
     showToast('❌ Delete failed: ' + e.message);
     return;
   }
-
   setTimeout(resetAddSheet, 300);
   renderPortfolio();
-  generateSuggestions();
 }
 
 function resetAddSheet() {
@@ -1816,36 +2061,29 @@ function resetAddSheet() {
 }
 
 // ==========================================
-// AI SUGGESTIONS (via Claude API)
+// AI SUGGESTIONS
 // ==========================================
-async function generateSuggestions() {
-  // Use cached results if less than 30 mins old
+async function generateSuggestions(forceRefresh = false) {
   const cached = localStorage.getItem('sw_suggestions');
   const cachedTime = localStorage.getItem('sw_suggestions_time');
-  if (cached && cachedTime && Date.now() - cachedTime < 24 * 60 * 60 * 1000) {
+  if (!forceRefresh && cached && cachedTime && Date.now() - cachedTime < 24 * 60 * 60 * 1000) {
     allSuggestions = JSON.parse(cached);
     renderSuggestions();
     return;
   }
-  if (holdings.length === 0) {
-    allSuggestions = [];
-    renderSuggestions();
-    return;
-  }
+  if (holdings.length === 0) { allSuggestions = []; renderSuggestions(); return; }
+
   document.getElementById('ai-portfolio-analysis').style.display = 'block';
   document.getElementById('ai-analysis-text').textContent = 'Analyzing your portfolio with live market data...';
 
-  // Fetch current prices
-  const prices = await Promise.all(holdings.map(h => fetchStockPrice(h.ticker)));
-  const priceMap = {};
-  prices.forEach(p => priceMap[p.ticker] = p);
-
+  // Use current cached prices for quick AI context
   const portfolioSummary = holdings.map(h => {
-    const p = priceMap[h.ticker];
-    const value = p.price ? p.price * h.shares : h.cost * h.shares;
+    const p = stockCache[h.ticker];
+    const price = p && p.price ? p.price : h.cost;
+    const value = price * h.shares;
     const gain = value - h.cost * h.shares;
     const gainPct = (gain / (h.cost * h.shares)) * 100;
-    return `${h.ticker}: ${h.shares} shares @ avg $${h.cost}, current price $${p.price?.toFixed(2) || 'unknown'}, P&L: ${gainPct.toFixed(1)}%, 1-day change: ${p.changePct?.toFixed(2) || 0}%`;
+    return `${h.ticker}: ${h.shares} shares @ avg $${h.cost}, current $${price.toFixed(2)}, P&L: ${gainPct.toFixed(1)}%, day: ${(p && p.changePct) ? p.changePct.toFixed(2) : '?'}%`;
   }).join('\n');
 
   const prompt = `You are a financial advisor AI. Analyze this portfolio and provide specific actionable suggestions.
@@ -1855,69 +2093,56 @@ ${portfolioSummary}
 
 Today's date: ${new Date().toLocaleDateString()}
 
-Respond with JSON only (no markdown, no explanation outside JSON):
+Respond with JSON only (no markdown):
 {
-  "portfolio_summary": "2-3 sentence overall portfolio assessment",
+  "portfolio_summary": "2-3 sentence overall assessment",
   "suggestions": [
-    {
-      "ticker": "AAPL",
-      "action": "buy|sell|hold|watch",
-      "reason": "Specific reason based on performance and market context (2 sentences)",
-      "confidence": 75
-    }
+    { "ticker": "AAPL", "action": "buy|sell|hold|watch", "reason": "Specific 2-sentence reason", "confidence": 75 }
   ]
-}
-
-Base your analysis on the actual numbers provided. Be direct and specific.`;
+}`;
 
   try {
     const res = await fetch('https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json','Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdybnRxaGN5d2JrYWtxdGZvenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTM0OTgsImV4cCI6MjA4ODIyOTQ5OH0.8EHk5hS2H01JvfHQYNKodOtsTmtYjF1QXCIIy7Z7dCU', },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
+        max_tokens: 800,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: prompt }]
       })
     });
     const data = await res.json();
     const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
-    // Robust JSON extraction - find first { to last }
     const jsonStart = text.indexOf('{');
     const jsonEnd = text.lastIndexOf('}');
-    if (jsonStart === -1 || jsonEnd === -1) throw new Error('No JSON found');
-    const clean = text.substring(jsonStart, jsonEnd + 1);
-    const parsed = JSON.parse(clean);
+    if (jsonStart === -1) throw new Error('No JSON');
+    const parsed = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
     document.getElementById('ai-analysis-text').textContent = parsed.portfolio_summary || '';
-    // Sanitize action to always be one of: buy, sell, hold, watch
-    const validActions = ['buy','sell','hold','watch'];
+    const validActions = ['buy', 'sell', 'hold', 'watch'];
     allSuggestions = (parsed.suggestions || []).map(s => ({
       ...s,
-      action: validActions.includes((s.action||'').toLowerCase().trim())
-        ? (s.action).toLowerCase().trim()
-        : 'hold'
+      action: validActions.includes((s.action || '').toLowerCase().trim()) ? s.action.toLowerCase().trim() : 'hold',
     }));
-    // Reset filter to 'all' when fresh suggestions arrive
     resetFilterTabs();
     renderSuggestions();
     localStorage.setItem('sw_suggestions', JSON.stringify(allSuggestions));
     localStorage.setItem('sw_suggestions_time', Date.now());
   } catch (e) {
-    // Fallback suggestions based on actual P&L data
+    // Fallback from local price data
     allSuggestions = holdings.map(h => {
-      const p = priceMap[h.ticker];
-      const gainPct = p.price ? ((p.price - h.cost) / h.cost) * 100 : 0;
-      const dayChg = p.changePct || 0;
+      const p = stockCache[h.ticker];
+      const gainPct = p && p.price ? ((p.price - h.cost) / h.cost) * 100 : 0;
+      const dayChg = p ? (p.changePct || 0) : 0;
       let action = 'hold', reason = '';
-      if (gainPct < -10) { action = 'sell'; reason = `Down ${Math.abs(gainPct).toFixed(1)}% from cost basis. Consider cutting losses or reviewing thesis.`; }
-      else if (gainPct > 30 && dayChg < -1) { action = 'sell'; reason = `Up ${gainPct.toFixed(1)}% overall but showing weakness today (-${Math.abs(dayChg).toFixed(2)}%). Consider taking profits.`; }
-      else if (dayChg > 2) { action = 'watch'; reason = `Strong day up ${dayChg.toFixed(2)}%. Monitor for continued momentum or reversal.`; }
-      else if (gainPct > 10) { action = 'hold'; reason = `Healthy ${gainPct.toFixed(1)}% gain. Hold and let winners run.`; }
-      else { action = 'hold'; reason = `Performing near cost basis. Hold and monitor for catalysts.`; }
-      return { ticker: h.ticker, action: action.toLowerCase().trim(), reason, confidence: Math.floor(55 + Math.random() * 30) };
+      if (gainPct < -10) { action = 'sell'; reason = `Down ${Math.abs(gainPct).toFixed(1)}% from cost. Consider reviewing thesis.`; }
+      else if (gainPct > 30 && dayChg < -1) { action = 'sell'; reason = `Up ${gainPct.toFixed(1)}% but showing weakness. Consider partial profit-taking.`; }
+      else if (dayChg > 2) { action = 'watch'; reason = `Strong day +${dayChg.toFixed(2)}%. Monitor for momentum or reversal.`; }
+      else if (gainPct > 10) { action = 'hold'; reason = `Healthy ${gainPct.toFixed(1)}% gain. Let winners run.`; }
+      else { action = 'hold'; reason = 'Near cost basis. Monitor for catalysts.'; }
+      return { ticker: h.ticker, action, reason, confidence: Math.floor(55 + Math.random() * 30) };
     });
-    document.getElementById('ai-analysis-text').textContent = `Your portfolio has ${holdings.length} position${holdings.length>1?'s':''}. Connect to live AI for detailed analysis.`;
+    document.getElementById('ai-analysis-text').textContent = `Your portfolio has ${holdings.length} position${holdings.length > 1 ? 's' : ''}. AI analysis based on price data.`;
     renderSuggestions();
   }
 }
@@ -1925,61 +2150,41 @@ Base your analysis on the actual numbers provided. Be direct and specific.`;
 function renderSuggestions() {
   const list = document.getElementById('suggestions-list');
   if (!list) return;
-
   if (!allSuggestions || allSuggestions.length === 0) {
     list.innerHTML = '<div class="empty-state"><div class="icon">🤖</div><p>Add holdings on the Portfolio tab to get AI-powered suggestions.</p></div>';
     return;
   }
-
-  // Normalize every action to lowercase, letters only
+  const validActions = ['buy', 'sell', 'hold', 'watch'];
   const normalized = allSuggestions.map(s => {
     const a = String(s.action || 'hold').toLowerCase().trim().replace(/[^a-z]/g, '');
-    const validActions = ['buy','sell','hold','watch'];
     return { ...s, action: validActions.includes(a) ? a : 'hold' };
   });
-
-  const filtered = currentFilter === 'all'
-    ? normalized
-    : normalized.filter(s => s.action === currentFilter);
-
+  const filtered = currentFilter === 'all' ? normalized : normalized.filter(s => s.action === currentFilter);
   if (filtered.length === 0) {
-    const msgs = {
-      buy:  'No Buy signals right now. Your stocks may already be fairly valued.',
-      sell: 'No Sell signals right now. AI sees no reason to sell your current holdings.',
-      hold: 'No Hold suggestions right now.',
-      watch: 'No Watch suggestions right now.'
-    };
-    const msg = msgs[currentFilter] || 'No ' + currentFilter + ' suggestions right now.';
-    list.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>' + msg + '</p></div>';
+    const msgs = { buy: 'No Buy signals.', sell: 'No Sell signals.', hold: 'No Hold suggestions.', watch: 'No Watch suggestions.' };
+    list.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>' + (msgs[currentFilter] || 'No results.') + '</p></div>';
     return;
   }
-
-  const colorMap = { buy:'var(--green)', sell:'var(--red)', hold:'var(--gold)', watch:'var(--blue)' };
+  const colorMap = { buy: 'var(--green)', sell: 'var(--red)', hold: 'var(--gold)', watch: 'var(--blue)' };
   list.innerHTML = filtered.map(s => {
     const color = colorMap[s.action] || 'var(--blue)';
-    return [
-      '<div class="ai-card ' + s.action + '">',
-        '<div class="ai-card-header">',
-          '<div class="ai-ticker">' + (s.ticker||'') + '</div>',
-          '<div class="ai-badge ' + s.action + '">' + s.action.toUpperCase() + '</div>',
-        '</div>',
-        '<div class="ai-reason">' + (s.reason||'') + '</div>',
-        '<div class="ai-confidence">',
-          '<div class="confidence-bar">',
-            '<div class="confidence-fill" style="width:' + (s.confidence||50) + '%;background:' + color + '"></div>',
-          '</div>',
-          '<div class="confidence-label">Confidence: ' + (s.confidence||50) + '%</div>',
-        '</div>',
-      '</div>'
-    ].join('');
+    return `<div class="ai-card ${s.action}">
+      <div class="ai-card-header">
+        <div class="ai-ticker">${s.ticker || ''}</div>
+        <div class="ai-badge ${s.action}">${s.action.toUpperCase()}</div>
+      </div>
+      <div class="ai-reason">${s.reason || ''}</div>
+      <div class="ai-confidence">
+        <div class="confidence-bar"><div class="confidence-fill" style="width:${s.confidence || 50}%;background:${color}"></div></div>
+        <div class="confidence-label">Confidence: ${s.confidence || 50}%</div>
+      </div>
+    </div>`;
   }).join('');
 }
 
-// Completely standalone filter function - no class manipulation, pure inline styles
 function filterSuggestions(filter) {
   currentFilter = filter;
-  const filters = ['all','buy','sell','hold','watch'];
-  filters.forEach(function(f) {
+  ['all', 'buy', 'sell', 'hold', 'watch'].forEach(f => {
     const btn = document.getElementById('ftab-' + f);
     if (!btn) return;
     if (f === filter) {
@@ -1995,73 +2200,57 @@ function filterSuggestions(filter) {
   renderSuggestions();
 }
 
-function resetFilterTabs() {
-  filterSuggestions('all');
-}
+function resetFilterTabs() { filterSuggestions('all'); }
 
 // ==========================================
-// NEWS (via Claude with web search)
+// NEWS
 // ==========================================
 async function loadNews() {
   const cached = localStorage.getItem('sw_news');
   const cachedTime = localStorage.getItem('sw_news_time');
-  if (cached && cachedTime && Date.now() - cachedTime  < 6 * 60 * 60 * 1000) {
-    renderNews(JSON.parse(cached));
-    return;
+  if (cached && cachedTime && Date.now() - cachedTime < 6 * 60 * 60 * 1000) {
+    renderNews(JSON.parse(cached)); return;
   }
   const list = document.getElementById('news-list');
   const tickers = holdings.map(h => h.ticker).join(', ') || 'S&P 500, NASDAQ, market';
-
   list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted)"><div class="ai-dot" style="display:inline-block;margin-right:8px"></div>Fetching latest market news...</div>`;
 
-  const prompt = `Search for the latest market news today relevant to these stocks: ${tickers}. Also include general market news.
-
-Return JSON only (no markdown):
-{
-  "news": [
-    {
-      "headline": "...",
-      "source": "source name",
-      "summary": "1 sentence summary",
-      "time": "X hours ago or today",
-      "impact": "positive|negative|neutral",
-      "tickers": ["AAPL"]
-    }
-  ]
-}
-
-Return 6-8 news items. Focus on actionable financial news.`;
+  const prompt = `Search for latest market news today for: ${tickers}. Also include general market news.
+Return JSON only:
+{"news":[{"headline":"...","source":"...","summary":"1 sentence","time":"X hours ago","impact":"positive|negative|neutral","tickers":["AAPL"]}]}
+Return 6-8 news items.`;
 
   try {
     const res = await fetch('https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json','Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdybnRxaGN5d2JrYWtxdGZvenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTM0OTgsImV4cCI6MjA4ODIyOTQ5OH0.8EHk5hS2H01JvfHQYNKodOtsTmtYjF1QXCIIy7Z7dCU', },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
+        max_tokens: 600,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: prompt }]
       })
     });
     const data = await res.json();
     const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    const parsed = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
     renderNews(parsed.news);
     localStorage.setItem('sw_news', JSON.stringify(parsed.news));
     localStorage.setItem('sw_news_time', Date.now());
   } catch (e) {
     renderNews([
-      { headline: "Markets open higher as investors digest economic data", source: "Market Watch", summary: "Major indices gained in early trading.", time: "2 hours ago", impact: "positive", tickers: [] },
-      { headline: "Fed signals potential rate adjustments ahead", source: "Reuters", summary: "Federal Reserve officials hint at upcoming policy changes.", time: "4 hours ago", impact: "neutral", tickers: [] },
-      { headline: "Tech sector leads gains amid AI investment boom", source: "Bloomberg", summary: "Technology stocks outperform broader market.", time: "6 hours ago", impact: "positive", tickers: [] }
+      { headline: "Markets open as investors digest economic data", source: "Market Watch", summary: "Indices gained in early trading.", time: "2h ago", impact: "positive" },
+      { headline: "Fed signals potential rate adjustments", source: "Reuters", summary: "Policy changes hinted by officials.", time: "4h ago", impact: "neutral" },
+      { headline: "Tech sector leads gains amid AI boom", source: "Bloomberg", summary: "Technology stocks outperform.", time: "6h ago", impact: "positive" }
     ]);
   }
 }
 
 function renderNews(news) {
   const list = document.getElementById('news-list');
-  if (!news || !news.length) { list.innerHTML = '<div class="empty-state"><div class="icon">📰</div><p>No news available right now.</p></div>'; return; }
+  if (!news || !news.length) { list.innerHTML = '<div class="empty-state"><div class="icon">📰</div><p>No news available.</p></div>'; return; }
   list.innerHTML = news.map(n => `
     <div class="news-card">
       <div style="flex:1">
@@ -2069,7 +2258,7 @@ function renderNews(news) {
         <div class="news-headline">${n.headline}</div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="news-meta">${n.time}</div>
-          <div class="news-impact ${n.impact==='positive'?'pos':n.impact==='negative'?'neg':'neu'}">${n.impact==='positive'?'↑ Bullish':n.impact==='negative'?'↓ Bearish':'→ Neutral'}</div>
+          <div class="news-impact ${n.impact === 'positive' ? 'pos' : n.impact === 'negative' ? 'neg' : 'neu'}">${n.impact === 'positive' ? '↑ Bullish' : n.impact === 'negative' ? '↓ Bearish' : '→ Neutral'}</div>
         </div>
       </div>
     </div>`).join('');
@@ -2079,23 +2268,21 @@ function renderNews(news) {
 // MARKETS
 // ==========================================
 async function loadMarkets() {
-  const indices = ['SPY','QQQ','DIA','IWM'];
+  const indices = ['SPY', 'QQQ', 'DIA', 'IWM'];
   const container = document.getElementById('market-indices');
-  container.innerHTML = indices.map(t => `<div class="skeleton" style="height:80px;border-radius:14px"></div>`).join('');
-
-  const prices = await Promise.all(indices.map(t => fetchStockPrice(t)));
+  container.innerHTML = indices.map(() => `<div class="skeleton" style="height:80px;border-radius:14px"></div>`).join('');
+  const priceMap = await fetchPricesBatch(indices, null, false);
   const labels = { SPY: 'S&P 500', QQQ: 'NASDAQ', DIA: 'Dow Jones', IWM: 'Russell 2000' };
-
-  container.innerHTML = prices.map(p => `
-    <div class="market-card">
-      <div class="market-name">${labels[p.ticker] || p.ticker}</div>
-      <div class="market-value">${p.price ? '$'+p.price.toFixed(2) : '—'}</div>
-      <div class="market-change" style="color:${p.changePct>=0?'var(--green)':'var(--red)'}">
-        ${p.changePct>=0?'▲':'▼'} ${Math.abs(p.changePct).toFixed(2)}%
+  container.innerHTML = indices.map(t => {
+    const p = priceMap[t] || {};
+    return `<div class="market-card">
+      <div class="market-name">${labels[t] || t}</div>
+      <div class="market-value">${p.price ? '$' + p.price.toFixed(2) : '—'}</div>
+      <div class="market-change" style="color:${(p.changePct || 0) >= 0 ? 'var(--green)' : 'var(--red)'}">
+        ${(p.changePct || 0) >= 0 ? '▲' : '▼'} ${Math.abs(p.changePct || 0).toFixed(2)}%
       </div>
-    </div>`).join('');
-
-  // Load watchlist
+    </div>`;
+  }).join('');
   renderWatchlist();
 }
 
@@ -2103,19 +2290,21 @@ async function renderWatchlist() {
   const container = document.getElementById('watchlist-list');
   if (!watchlist.length) { container.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:20px">No watchlist items</div>'; return; }
   container.innerHTML = watchlist.map(() => `<div class="skeleton" style="height:78px;margin-bottom:10px;border-radius:16px"></div>`).join('');
-  const prices = await Promise.all(watchlist.map(t => fetchStockPrice(t)));
-  container.innerHTML = prices.map(p => `
-    <div class="holding-card">
-      <div class="holding-icon">${p.ticker.substring(0,2)}</div>
+  const priceMap = await fetchPricesBatch(watchlist, null, false);
+  container.innerHTML = watchlist.map(t => {
+    const p = priceMap[t] || {};
+    return `<div class="holding-card">
+      <div class="holding-icon">${t.substring(0, 2)}</div>
       <div class="holding-info">
-        <div class="holding-ticker">${p.ticker}</div>
-        <div class="holding-name">${p.name || p.ticker}</div>
+        <div class="holding-ticker">${t}</div>
+        <div class="holding-name">${p.name || t}</div>
       </div>
       <div class="holding-right">
-        <div class="holding-value">${p.price ? '$'+p.price.toFixed(2) : '—'}</div>
-        <div class="holding-change ${p.changePct>=0?'pos':'neg'}">${p.changePct>=0?'▲':'▼'} ${Math.abs(p.changePct).toFixed(2)}%</div>
+        <div class="holding-value">${p.price ? '$' + p.price.toFixed(2) : '—'}</div>
+        <div class="holding-change ${(p.changePct || 0) >= 0 ? 'pos' : 'neg'}">${(p.changePct || 0) >= 0 ? '▲' : '▼'} ${Math.abs(p.changePct || 0).toFixed(2)}%</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function addToWatchlist() {
@@ -2142,96 +2331,63 @@ async function askAI() {
   input.value = '';
 
   const messagesDiv = document.getElementById('ai-messages');
-
-  // Add user bubble
   messagesDiv.innerHTML += `<div style="text-align:right;margin-top:10px"><div style="display:inline-block;background:rgba(91,143,255,0.15);border:1px solid rgba(91,143,255,0.3);border-radius:12px 12px 0 12px;padding:10px 14px;font-size:14px;max-width:85%">${q}</div></div>`;
 
   const thinkingId = 'thinking-' + Date.now();
   messagesDiv.innerHTML += `<div id="${thinkingId}" style="margin-top:10px"><div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:12px 12px 12px 0;padding:10px 14px;font-size:14px;color:var(--muted)"><span class="loading-dot"></span> Thinking...</div></div>`;
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-  // Always fetch latest prices for portfolio context
-  let portfolioContext = 'User has no current holdings.';
+  let portfolioContext = 'User has no holdings.';
   if (holdings.length > 0) {
-    const prices = await Promise.all(holdings.map(h => fetchStockPrice(h.ticker)));
-    const priceMap = {};
-    prices.forEach(p => priceMap[p.ticker] = p);
-
-    const totalValue = holdings.reduce((sum, h) => {
-      const p = priceMap[h.ticker];
-      return sum + (p.price ? p.price * h.shares : h.cost * h.shares);
-    }, 0);
-
-    portfolioContext = `User portfolio worth $${totalValue.toFixed(0)}: ` +
-      holdings.map(h => {
-        const p = priceMap[h.ticker];
-        const currentPrice = p.price ? `$${p.price.toFixed(2)}` : `$${h.cost}`;
-        const gainPct = p.price ? ((p.price - h.cost) / h.cost * 100).toFixed(1) : '0';
-        const value = p.price ? (p.price * h.shares).toFixed(0) : (h.cost * h.shares).toFixed(0);
-        const dayChg = p.changePct ? p.changePct.toFixed(1) : '0';
-        return `${h.ticker}(${h.shares.toFixed(2)}shares@avg$${h.cost},now${currentPrice},val$${value},P&L${gainPct}%,day${dayChg}%)`;
-      }).join(' | ');
+    let totalValue = 0;
+    const lines = holdings.map(h => {
+      const p = stockCache[h.ticker];
+      const price = p && p.price ? p.price : h.cost;
+      const value = price * h.shares;
+      totalValue += value;
+      const gainPct = ((price - h.cost) / h.cost * 100).toFixed(1);
+      return `${h.ticker}(${h.shares}sh@avg$${h.cost},now$${price.toFixed(2)},P&L${gainPct}%)`;
+    });
+    portfolioContext = `Portfolio ~$${totalValue.toFixed(0)}: ` + lines.join(' | ');
   }
 
-  // Keep only last 4 messages to avoid token overflow
-  if (chatHistory.length > 4) {
-    chatHistory = chatHistory.slice(-4);
-  }
-
+  if (chatHistory.length > 6) chatHistory = chatHistory.slice(-6);
   chatHistory.push({ role: 'user', content: q });
-
-  const systemPrompt = `You are a concise financial advisor. ${portfolioContext}. Max 100 words per response. Be direct and specific.`;
 
   try {
     const res = await fetch('https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdybnRxaGN5d2JrYWtxdGZvenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTM0OTgsImV4cCI6MjA4ODIyOTQ5OH0.8EHk5hS2H01JvfHQYNKodOtsTmtYjF1QXCIIy7Z7dCU',
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 300,
-        system: systemPrompt,
-        messages: chatHistory  // NO web_search tool — saves lots of tokens
+        system: `You are a concise financial advisor. ${portfolioContext}. Max 100 words. Be direct.`,
+        messages: chatHistory
       })
     });
-
     const data = await res.json();
     const reply = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
     chatHistory.push({ role: 'assistant', content: reply });
-
-    // Convert markdown to HTML
     const formatted = reply
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/^### (.*?)$/gm, '<div style="font-weight:700;font-size:14px;margin:10px 0 4px">$1</div>')
-      .replace(/^## (.*?)$/gm, '<div style="font-weight:700;font-size:15px;margin:10px 0 4px">$1</div>')
-      .replace(/^# (.*?)$/gm, '<div style="font-weight:700;font-size:16px;margin:10px 0 4px">$1</div>')
       .replace(/^- (.*?)$/gm, '<div style="padding:2px 0 2px 12px">• $1</div>')
-      .replace(/\n\n/g, '<br><br>')
-      .replace(/\n/g, '<br>');
-
+      .replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
     document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;line-height:1.6">${formatted}</div>`;
-
   } catch (e) {
-    document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;color:var(--red)">Unable to connect to AI right now. Please try again.</div>`;
+    document.getElementById(thinkingId).innerHTML = `<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;color:var(--red)">Unable to connect. Please try again.</div>`;
   }
-
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 // ==========================================
 // THEMES
 // ==========================================
-const THEMES = ['midnight','forest','sunset','ocean','light','gold','aurora'];
+const THEMES = ['midnight', 'forest', 'sunset', 'ocean', 'light', 'gold', 'aurora'];
 
 function applyTheme(theme) {
-  // Remove all theme classes
   THEMES.forEach(t => document.body.classList.remove('theme-' + t));
   document.body.classList.add('theme-' + theme);
   localStorage.setItem('stockwise_theme', theme);
-  // Update swatches
   document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
   const active = document.getElementById('swatch-' + theme);
   if (active) active.classList.add('active');
@@ -2246,7 +2402,7 @@ function openThemePicker() {
 function openUserMenu() {
   if (!currentUser) return;
   const name = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User';
-  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2);
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   document.getElementById('user-menu-initials').textContent = initials;
   document.getElementById('user-menu-name').textContent = name;
   document.getElementById('user-menu-email').textContent = currentUser.email;
@@ -2260,13 +2416,6 @@ function openUserMenu() {
   document.getElementById('user-sheet').classList.add('open');
 }
 
-function refreshPortfolio() {
-  stockCache = {};
-  loadHoldingsFromSupabase();
-  closeSheet('user');
-  showToast('🔄 Refreshing...');
-}
-
 function loadSavedTheme() {
   const saved = localStorage.getItem('stockwise_theme') || 'midnight';
   THEMES.forEach(t => document.body.classList.remove('theme-' + t));
@@ -2275,7 +2424,6 @@ function loadSavedTheme() {
   const active = document.getElementById('swatch-' + saved);
   if (active) active.classList.add('active');
 }
-
 
 // ==========================================
 // DASHBOARD
@@ -2290,252 +2438,169 @@ async function loadDashboard() {
     document.getElementById('dash-total-change').textContent = 'Add stocks to see your dashboard';
     return;
   }
-
   document.getElementById('dash-last-updated').textContent = 'Loading...';
 
-  // Fetch all prices
-  const prices = await Promise.all(holdings.map(h => fetchStockPrice(h.ticker)));
-  prices.forEach(p => dashPriceMap[p.ticker] = p);
+  const priceMap = await fetchPricesBatch(holdings.map(h => h.ticker), null, false);
+  Object.assign(dashPriceMap, priceMap);
 
-  // Calculate totals
   let totalValue = 0, totalCost = 0, totalDayChange = 0;
   const stockPerf = [];
 
   holdings.forEach(h => {
     const p = dashPriceMap[h.ticker];
-    const value = p.price ? p.price * h.shares : h.cost * h.shares;
+    const price = p && p.price ? p.price : h.cost;
+    const value = price * h.shares;
     const cost = h.cost * h.shares;
     const gain = value - cost;
     const gainPct = (gain / cost) * 100;
-    const dayGain = (p.change || 0) * h.shares;
+    const dayGain = p && p.change ? p.change * h.shares : 0;
     totalValue += value;
     totalCost += cost;
     totalDayChange += dayGain;
-    stockPerf.push({ ticker: h.ticker, name: p.name || h.ticker, value, gain, gainPct, dayGain });
+    stockPerf.push({ ticker: h.ticker, name: (p && p.name) || h.ticker, value, gain, gainPct, dayGain });
   });
 
   const totalGain = totalValue - totalCost;
-  const totalGainPct = (totalGain / totalCost) * 100;
-  const dayPct = totalCost > 0 ? (totalDayChange / totalCost) * 100 : 0;
+  const totalGainPct = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
 
-  // Update header stats
-  document.getElementById('dash-total-value').textContent = '$' + totalValue.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('dash-total-value').textContent = '$' + totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const changeEl = document.getElementById('dash-total-change');
   const isPos = totalGain >= 0;
   changeEl.style.color = isPos ? 'var(--green)' : 'var(--red)';
-  changeEl.textContent = (isPos?'+':'-') + '$' + Math.abs(totalGain).toFixed(2) + ' (' + (isPos?'+':'') + totalGainPct.toFixed(2) + '%) all time  |  ' + (totalDayChange>=0?'+':'-') + '$' + Math.abs(totalDayChange).toFixed(2) + ' today';
+  changeEl.textContent = (isPos ? '+' : '-') + '$' + Math.abs(totalGain).toFixed(2) + ' (' + (isPos ? '+' : '') + totalGainPct.toFixed(2) + '%) all time  |  ' + (totalDayChange >= 0 ? '+' : '-') + '$' + Math.abs(totalDayChange).toFixed(2) + ' today';
+  document.getElementById('dash-last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  document.getElementById('dash-last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-
-  // Quick stats
-  document.getElementById('dash-invested').textContent = '$' + totalCost.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('dash-invested').textContent = '$' + totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const gainEl = document.getElementById('dash-gain');
-  gainEl.textContent = (totalGain>=0?'+':'-') + '$' + Math.abs(totalGain).toFixed(2);
-  gainEl.style.color = totalGain>=0 ? 'var(--green)' : 'var(--red)';
-  document.getElementById('dash-gain-pct').textContent = (totalGainPct>=0?'+':'') + totalGainPct.toFixed(2) + '%';
-  document.getElementById('dash-gain-pct').style.color = totalGainPct>=0 ? 'var(--green)' : 'var(--red)';
+  gainEl.textContent = (totalGain >= 0 ? '+' : '-') + '$' + Math.abs(totalGain).toFixed(2);
+  gainEl.style.color = totalGain >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('dash-gain-pct').textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '%';
+  document.getElementById('dash-gain-pct').style.color = totalGainPct >= 0 ? 'var(--green)' : 'var(--red)';
 
-  // Best & worst
-  const sorted = [...stockPerf].sort((a,b) => b.gainPct - a.gainPct);
+  const sorted = [...stockPerf].sort((a, b) => b.gainPct - a.gainPct);
   if (sorted.length > 0) {
     document.getElementById('dash-best').textContent = sorted[0].ticker;
     document.getElementById('dash-best-pct').textContent = '+' + sorted[0].gainPct.toFixed(2) + '%';
-    const worst = sorted[sorted.length-1];
+    const worst = sorted[sorted.length - 1];
     document.getElementById('dash-worst').textContent = worst.ticker;
-    document.getElementById('dash-worst-pct').textContent = (worst.gainPct>=0?'+':'') + worst.gainPct.toFixed(2) + '%';
+    document.getElementById('dash-worst-pct').textContent = (worst.gainPct >= 0 ? '+' : '') + worst.gainPct.toFixed(2) + '%';
     document.getElementById('dash-worst-pct').style.color = worst.gainPct >= 0 ? 'var(--green)' : 'var(--red)';
   }
 
-  // Dividend tile
   await loadDividendTile(dashPriceMap);
-
-  // Allocation chart
   renderAllocation(stockPerf, totalValue);
-
-  // Performance table
   renderPerfTable(sorted);
-
-  // Main portfolio chart
   await renderPortfolioChart(currentChartRange, totalValue, totalCost);
 }
 
 async function renderPortfolioChart(range, currentValue, totalCost) {
   const canvas = document.getElementById('portfolio-chart');
   if (!canvas) return;
-
-  // Generate historical data points by fetching historical prices
   const { labels, values } = await buildChartData(range, currentValue, totalCost);
-
-  const isProfit = values[values.length-1] >= values[0];
+  const isProfit = values[values.length - 1] >= values[0];
   const color = isProfit ? '#00e5a0' : '#ff4d6d';
-
   if (portfolioChart) { portfolioChart.destroy(); portfolioChart = null; }
-
   const ctx = canvas.getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, canvas.parentElement.offsetHeight || 180);
   gradient.addColorStop(0, isProfit ? 'rgba(0,229,160,0.3)' : 'rgba(255,77,109,0.3)');
   gradient.addColorStop(1, 'rgba(0,0,0,0)');
-
   portfolioChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels,
-      datasets: [{
-        data: values,
-        borderColor: color,
-        borderWidth: 2.5,
-        backgroundColor: gradient,
-        fill: true,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 6,
-        pointHoverBackgroundColor: color,
-        pointHoverBorderColor: '#fff',
-        pointHoverBorderWidth: 2,
-      }]
+      datasets: [{ data: values, borderColor: color, borderWidth: 2.5, backgroundColor: gradient, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 6, pointHoverBackgroundColor: color, pointHoverBorderColor: '#fff', pointHoverBorderWidth: 2 }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      resizeDelay: 0,
-      interaction: { mode: 'index', intersect: false },
+      responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'rgba(20,20,30,0.95)',
-          titleColor: '#6b6b80',
-          bodyColor: '#f0f0f5',
-          borderColor: 'rgba(255,255,255,0.1)',
-          borderWidth: 1,
-          padding: 12,
-          callbacks: {
-            label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-          }
+          backgroundColor: 'rgba(20,20,30,0.95)', titleColor: '#6b6b80', bodyColor: '#f0f0f5',
+          borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, padding: 12,
+          callbacks: { label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
         }
       },
       scales: {
-        x: {
-          grid: { display: false },
-          border: { display: false },
-          ticks: { color: '#6b6b80', font: { size: 10 }, maxTicksLimit: 6 }
-        },
-        y: {
-          grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
-          border: { display: false },
-          ticks: {
-            color: '#6b6b80', font: { size: 10 },
-            callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0))
-          }
-        }
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: '#6b6b80', font: { size: 10 }, maxTicksLimit: 6 } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }, border: { display: false }, ticks: { color: '#6b6b80', font: { size: 10 }, callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(0)) } }
       }
     }
   });
 }
 
 async function buildChartData(range, currentValue, totalCost) {
-  // Get number of data points and interval based on range
-  const configs = {
-    '1W': { days: 7, interval: '1d', points: 7 },
-    '1M': { days: 30, interval: '1d', points: 30 },
-    '3M': { days: 90, interval: '1wk', points: 13 },
-    '1Y': { days: 365, interval: '1wk', points: 52 },
-    '3Y': { days: 1095, interval: '1mo', points: 36 },
-    '5Y': { days: 1825, interval: '1mo', points: 60 },
-  };
+  const configs = { '1W': { days: 7, interval: '1d' }, '1M': { days: 30, interval: '1d' }, '3M': { days: 90, interval: '1wk' }, '1Y': { days: 365, interval: '1wk' }, '3Y': { days: 1095, interval: '1mo' }, '5Y': { days: 1825, interval: '1mo' } };
   const cfg = configs[range] || configs['1Y'];
-
   try {
-    // Fetch historical data for each holding in parallel
-    const historicalData = await Promise.all(
-      holdings.map(h => fetchHistoricalPrices(h.ticker, cfg.days, cfg.interval))
-    );
-
-    // Find common date range
+    const historicalData = await Promise.all(holdings.map(h => fetchHistoricalPrices(h.ticker, cfg.days, cfg.interval)));
     if (!historicalData[0] || historicalData[0].length === 0) throw new Error('No data');
-
     const dates = historicalData[0].map(d => d.date);
-    const values = dates.map((date, i) => {
-      let portfolioVal = 0;
+    const values = dates.map((_, i) => {
+      let val = 0;
       holdings.forEach((h, hi) => {
         const hist = historicalData[hi];
-        const point = hist[i] || hist[hist.length-1];
-        if (point) portfolioVal += point.price * h.shares;
+        const point = hist[i] || hist[hist.length - 1];
+        if (point) val += point.price * h.shares;
       });
-      return portfolioVal;
+      return val;
     });
-
-    // Format labels
     const labels = dates.map(d => {
       const date = new Date(d * 1000);
-      if (range === '1W' || range === '1M') return date.toLocaleDateString([],{month:'short',day:'numeric'});
-      if (range === '3M' || range === '1Y') return date.toLocaleDateString([],{month:'short',day:'numeric'});
-      return date.toLocaleDateString([],{month:'short',year:'2-digit'});
+      if (range === '3Y' || range === '5Y') return date.toLocaleDateString([], { month: 'short', year: '2-digit' });
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     });
-
     return { labels, values };
-  } catch(e) {
-    // Fallback: generate simulated data based on current value and cost
+  } catch (e) {
     return generateSimulatedChart(range, currentValue, totalCost);
   }
 }
 
 async function fetchHistoricalPrices(ticker, days, interval) {
-  try {
-    const end = Math.floor(Date.now() / 1000);
-    const start = end - (days * 86400);
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&period1=${start}&period2=${end}`;
-    const proxy = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    const res = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
-    const data = await res.json();
-    const result = data.chart.result[0];
-    const timestamps = result.timestamp;
-    const closes = result.indicators.quote[0].close;
-    return timestamps.map((t, i) => ({ date: t, price: closes[i] || closes[i-1] || 0 })).filter(d => d.price > 0);
-  } catch(e) {
-    // Try allorigins fallback
-    try {
-      const end = Math.floor(Date.now() / 1000);
-      const start = end - (days * 86400);
+  const end = Math.floor(Date.now() / 1000);
+  const start = end - (days * 86400);
+
+  // Try two proxy variations
+  const attempts = [
+    () => {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&period1=${start}&period2=${end}`;
+      return fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: new AbortController().signal }).then(r => r.json());
+    },
+    () => {
       const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&period1=${start}&period2=${end}`;
-      const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-      const res = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
-      const raw = await res.json();
-      const data = JSON.parse(raw.contents);
+      return fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, 8000)
+        .then(r => r.json()).then(raw => JSON.parse(raw.contents));
+    }
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const data = await attempt();
       const result = data.chart.result[0];
       const timestamps = result.timestamp;
       const closes = result.indicators.quote[0].close;
       return timestamps.map((t, i) => ({ date: t, price: closes[i] || 0 })).filter(d => d.price > 0);
-    } catch(e2) {
-      return [];
-    }
+    } catch (e) { continue; }
   }
+  return [];
 }
 
 function generateSimulatedChart(range, currentValue, totalCost) {
-  const points = { '1W':7,'1M':30,'3M':13,'1Y':52,'3Y':36,'5Y':60 }[range] || 52;
-  const labels = [];
-  const values = [];
+  const points = { '1W': 7, '1M': 30, '3M': 13, '1Y': 52, '3Y': 36, '5Y': 60 }[range] || 52;
+  const daysBack = { '1W': 7, '1M': 30, '3M': 90, '1Y': 365, '3Y': 1095, '5Y': 1825 }[range] || 365;
+  const labels = [], values = [];
   const now = new Date();
-  const daysBack = { '1W':7,'1M':30,'3M':90,'1Y':365,'3Y':1095,'5Y':1825 }[range] || 365;
-
-  // Simulate growth from totalCost to currentValue with some noise
-  const startVal = totalCost * 0.75;
+  const startVal = totalCost * 0.8;
   const endVal = currentValue;
   const trend = (endVal - startVal) / points;
-
   for (let i = 0; i < points; i++) {
     const d = new Date(now - ((points - i) / points) * daysBack * 86400000);
-    if (range === '1W' || range === '1M') {
-      labels.push(d.toLocaleDateString([],{month:'short',day:'numeric'}));
-    } else if (range === '3M' || range === '1Y') {
-      labels.push(d.toLocaleDateString([],{month:'short',day:'numeric'}));
-    } else {
-      labels.push(d.toLocaleDateString([],{month:'short',year:'2-digit'}));
-    }
+    labels.push((range === '3Y' || range === '5Y')
+      ? d.toLocaleDateString([], { month: 'short', year: '2-digit' })
+      : d.toLocaleDateString([], { month: 'short', day: 'numeric' }));
     const noise = (Math.random() - 0.45) * startVal * 0.04;
     values.push(Math.max(0, startVal + trend * i + noise));
   }
-  values[values.length-1] = endVal;
+  values[values.length - 1] = endVal;
   return { labels, values };
 }
 
@@ -2544,121 +2609,66 @@ async function switchChartRange(range, el) {
   document.querySelectorAll('.range-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   if (portfolioChart) { portfolioChart.destroy(); portfolioChart = null; }
-  const canvas = document.getElementById('portfolio-chart');
-  if (canvas) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
-
   let totalValue = 0, totalCost = 0;
   holdings.forEach(h => {
     const p = dashPriceMap[h.ticker];
-    const value = p && p.price ? p.price * h.shares : h.cost * h.shares;
-    totalValue += value;
+    totalValue += (p && p.price ? p.price * h.shares : h.cost * h.shares);
     totalCost += h.cost * h.shares;
   });
-
   await renderPortfolioChart(range, totalValue, totalCost);
 }
 
 function renderAllocation(stockPerf, totalValue) {
-  if (stockPerf.length === 0) return;
-  const colors = ['#5b8fff','#a78bfa','#00e5a0','#f5c842','#ff4d6d','#38bdf8','#fb7185','#34d399','#f97316','#e879f9'];
-  const wrap = document.getElementById('dash-allocation-wrap');
-  wrap.style.display = 'block';
-
-  const bar = document.getElementById('dash-alloc-bar');
-  bar.innerHTML = stockPerf.map((s, i) => {
+  if (!stockPerf.length) return;
+  const colors = ['#5b8fff', '#a78bfa', '#00e5a0', '#f5c842', '#ff4d6d', '#38bdf8', '#fb7185', '#34d399', '#f97316', '#e879f9'];
+  document.getElementById('dash-allocation-wrap').style.display = 'block';
+  document.getElementById('dash-alloc-bar').innerHTML = stockPerf.map((s, i) => {
     const pct = (s.value / totalValue) * 100;
-    return `<div class="allocation-segment" style="width:${pct}%;background:${colors[i%colors.length]}"></div>`;
+    return `<div class="allocation-segment" style="width:${pct}%;background:${colors[i % colors.length]}"></div>`;
   }).join('');
-
-  const legend = document.getElementById('dash-alloc-legend');
-  legend.innerHTML = stockPerf.map((s, i) => {
+  document.getElementById('dash-alloc-legend').innerHTML = stockPerf.map((s, i) => {
     const pct = (s.value / totalValue) * 100;
-    return `
-      <div class="legend-item">
-        <div class="legend-dot" style="background:${colors[i%colors.length]}"></div>
-        <div class="legend-name">${s.ticker}</div>
-        <div class="legend-val">$${s.value.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
-        <div class="legend-pct">${pct.toFixed(1)}%</div>
-      </div>`;
+    return `<div class="legend-item">
+      <div class="legend-dot" style="background:${colors[i % colors.length]}"></div>
+      <div class="legend-name">${s.ticker}</div>
+      <div class="legend-val">$${s.value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+      <div class="legend-pct">${pct.toFixed(1)}%</div>
+    </div>`;
   }).join('');
 }
 
 function renderPerfTable(sorted) {
-  if (sorted.length === 0) return;
+  if (!sorted.length) return;
   document.getElementById('dash-perf-wrap').style.display = 'block';
   const maxAbs = Math.max(...sorted.map(s => Math.abs(s.gainPct)));
   document.getElementById('dash-perf-list').innerHTML = sorted.map(s => `
     <div class="perf-row">
-      <div>
-        <div class="perf-ticker">${s.ticker}</div>
-        <div class="perf-name">${s.name.substring(0,20)}</div>
-      </div>
-      <div class="perf-bar-wrap">
-        <div class="perf-bar-fill" style="width:${Math.abs(s.gainPct)/maxAbs*100}%;background:${s.gainPct>=0?'var(--green)':'var(--red)'}"></div>
-      </div>
-      <div class="perf-pct" style="color:${s.gainPct>=0?'var(--green)':'var(--red)'}">${s.gainPct>=0?'+':''}${s.gainPct.toFixed(2)}%</div>
+      <div><div class="perf-ticker">${s.ticker}</div><div class="perf-name">${s.name.substring(0, 20)}</div></div>
+      <div class="perf-bar-wrap"><div class="perf-bar-fill" style="width:${Math.abs(s.gainPct) / maxAbs * 100}%;background:${s.gainPct >= 0 ? 'var(--green)' : 'var(--red)'}"></div></div>
+      <div class="perf-pct" style="color:${s.gainPct >= 0 ? 'var(--green)' : 'var(--red)'}">${s.gainPct >= 0 ? '+' : ''}${s.gainPct.toFixed(2)}%</div>
     </div>`).join('');
 }
-
 
 // ==========================================
 // DIVIDEND INCOME
 // ==========================================
-
-// Known dividend yields (trailing 12-month %) for common stocks
-// Updated March 2025 — live fetch attempted for unlisted tickers
 const KNOWN_YIELDS = {
-  // === YOUR HOLDINGS ===
-  'CG':3.2,       // Carlyle Group — pays quarterly dividends
-  'O':5.8,        // Realty Income — monthly dividend king!
-  'REALTY':5.8,   // alias
-  'PYPL':0,       // PayPal — no dividend as of 2025
-  'AMZN':0,       // Amazon — no dividend
-  'APLD':0,       // Applied Digital — no dividend
-  'NVDA':0.03,    // NVIDIA — tiny dividend (~$0.01/share/quarter)
-  'SOFI':0,       // SoFi — no dividend
-
-  // === HIGH DIVIDEND / INCOME ===
-  'T':5.8, 'VZ':6.5, 'MO':9.2, 'PM':5.1,
-  'WBA':9.8, 'PFE':6.2, 'BMY':4.8, 'ABBV':3.9,
-  'IBM':4.6, 'MMM':5.8, 'CVX':4.1, 'XOM':3.4,
-
-  // === DIVIDEND ARISTOCRATS ===
-  'KO':3.1, 'PEP':2.9, 'JNJ':3.0, 'PG':2.4,
-  'MRK':2.7, 'MCD':2.3, 'SBUX':2.5, 'YUM':1.8,
-  'HD':2.4, 'LOW':1.9, 'WMT':1.3, 'TGT':3.2,
-  'NKE':1.4, 'COST':0.6,
-
-  // === REITs ===
-  'VNQ':4.2, 'AMT':3.1, 'SPG':5.6, 'DLR':3.2,
-  'PSA':4.1, 'EQR':3.8, 'PLD':2.7,
-
-  // === DIVIDEND ETFs ===
-  'SPY':1.3, 'QQQ':0.6, 'DIA':1.9, 'VTI':1.4, 'VOO':1.3,
-  'SCHD':3.5, 'VYM':3.1, 'HDV':3.8, 'JEPI':7.2, 'JEPQ':9.1,
-  'DVY':3.9, 'SDY':2.5, 'DGRO':2.3, 'VIG':1.8,
-  'IWM':1.4, 'EFA':2.8, 'EEM':2.1,
-
-  // === BANKS & FINANCIALS ===
-  'JPM':2.3, 'BAC':2.5, 'WFC':2.8, 'C':3.5,
-  'GS':2.5, 'MS':3.2, 'BLK':2.6, 'AXP':1.2,
-
-  // === TECH ===
-  'AAPL':0.5, 'MSFT':0.7, 'GOOGL':0, 'GOOG':0,
-  'META':0.4, 'TSLA':0, 'AMD':0, 'NFLX':0,
-  'ORCL':1.4, 'CSCO':3.1, 'TXN':2.7, 'INTC':1.2, 'QCOM':2.1,
-
-  // === NO DIVIDEND ===
-  'BRK.B':0, 'V':0.8, 'MA':0.6, 'SQ':0,
-  'PLTR':0, 'RIVN':0, 'LCID':0, 'DIS':0,
-  'GLD':0, 'SLV':0,
+  'CG': 3.2, 'O': 5.8, 'PYPL': 0, 'AMZN': 0, 'APLD': 0, 'NVDA': 0.03, 'SOFI': 0,
+  'VOO': 1.3, 'VTI': 1.4, 'TSLA': 0, 'NRDY': 0, 'SOUN': 0, 'GELS': 0,
+  'T': 5.8, 'VZ': 6.5, 'MO': 9.2, 'PM': 5.1, 'WBA': 9.8, 'PFE': 6.2, 'BMY': 4.8, 'ABBV': 3.9,
+  'IBM': 4.6, 'MMM': 5.8, 'CVX': 4.1, 'XOM': 3.4,
+  'KO': 3.1, 'PEP': 2.9, 'JNJ': 3.0, 'PG': 2.4, 'MRK': 2.7, 'MCD': 2.3, 'SBUX': 2.5,
+  'HD': 2.4, 'LOW': 1.9, 'WMT': 1.3, 'TGT': 3.2, 'NKE': 1.4, 'COST': 0.6,
+  'VNQ': 4.2, 'AMT': 3.1, 'SPG': 5.6, 'DLR': 3.2, 'PSA': 4.1, 'EQR': 3.8, 'PLD': 2.7,
+  'SPY': 1.3, 'QQQ': 0.6, 'DIA': 1.9, 'SCHD': 3.5, 'VYM': 3.1, 'HDV': 3.8, 'JEPI': 7.2, 'JEPQ': 9.1,
+  'JPM': 2.3, 'BAC': 2.5, 'WFC': 2.8, 'C': 3.5, 'GS': 2.5, 'MS': 3.2,
+  'AAPL': 0.5, 'MSFT': 0.7, 'GOOGL': 0, 'META': 0.4, 'AMD': 0, 'NFLX': 0,
+  'ORCL': 1.4, 'CSCO': 3.1, 'TXN': 2.7, 'INTC': 1.2, 'QCOM': 2.1,
+  'BRK.B': 0, 'V': 0.8, 'MA': 0.6,
 };
 
-let divViewMode = 'monthly'; // 'monthly' or 'annual'
-let divData = []; // [{ticker, shares, price, yield, annual, monthly}]
+let divViewMode = 'monthly';
+let divData = [];
 
 function switchDivView(mode) {
   divViewMode = mode;
@@ -2679,19 +2689,13 @@ function switchDivView(mode) {
 
 async function loadDividendTile(priceMap) {
   divData = [];
-
-  // Show loading state
   const wrap = document.getElementById('dash-dividend-wrap');
   if (wrap) wrap.style.display = 'block';
   const totalEl = document.getElementById('div-total');
   if (totalEl) totalEl.textContent = '...';
 
-  // Fetch live yield for ALL stocks in parallel from Yahoo Finance
-  // Fall back to hardcoded list only if live fetch fails
   const yieldResults = await Promise.all(holdings.map(async h => {
-    // Always try live first
     let liveYield = await fetchDividendYield(h.ticker);
-    // If live returns 0, check hardcoded list as backup
     if (liveYield === 0 && KNOWN_YIELDS.hasOwnProperty(h.ticker.toUpperCase())) {
       liveYield = KNOWN_YIELDS[h.ticker.toUpperCase()];
     }
@@ -2707,20 +2711,8 @@ async function loadDividendTile(priceMap) {
     const value = price * h.shares;
     const yieldPct = yieldMap[h.ticker] || 0;
     const annualIncome = value * (yieldPct / 100);
-
-    divData.push({
-      ticker: h.ticker,
-      shares: h.shares,
-      price,
-      yieldPct,
-      annual: annualIncome,
-      monthly: annualIncome / 12,
-      value,
-      isLive: yieldPct > 0
-    });
+    divData.push({ ticker: h.ticker, shares: h.shares, price, yieldPct, annual: annualIncome, monthly: annualIncome / 12, value });
   }
-
-  // Sort by income descending
   divData.sort((a, b) => b.annual - a.annual);
   renderDividendBreakdown();
 }
@@ -2730,92 +2722,62 @@ function renderDividendBreakdown() {
   const totalMonthly = totalAnnual / 12;
   const isMonthly = divViewMode === 'monthly';
   const displayTotal = isMonthly ? totalMonthly : totalAnnual;
-
   const totalEl = document.getElementById('div-total');
-  const labelEl = document.getElementById('div-period-label');
-  const equivEl = document.getElementById('div-annual-equiv');
-
   if (totalEl) totalEl.textContent = '$' + displayTotal.toFixed(2);
+  const labelEl = document.getElementById('div-period-label');
   if (labelEl) labelEl.textContent = isMonthly ? 'Monthly Income' : 'Annual Income';
-  if (equivEl) {
-    if (isMonthly) {
-      equivEl.textContent = '$' + totalAnnual.toFixed(2) + ' per year';
-    } else {
-      equivEl.textContent = '$' + totalMonthly.toFixed(2) + ' per month';
-    }
-  }
-
+  const equivEl = document.getElementById('div-annual-equiv');
+  if (equivEl) equivEl.textContent = isMonthly ? '$' + totalAnnual.toFixed(2) + ' per year' : '$' + totalMonthly.toFixed(2) + ' per month';
   const breakdown = document.getElementById('div-breakdown');
   if (!breakdown) return;
-
-  if (totalAnnual === 0) {
-    breakdown.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:10px 0">None of your current stocks pay dividends</div>';
-    return;
-  }
-
+  if (totalAnnual === 0) { breakdown.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:10px 0">None of your current stocks pay dividends</div>'; return; }
   const paying = divData.filter(d => d.yieldPct > 0);
   const nonPaying = divData.filter(d => d.yieldPct === 0);
-
   breakdown.innerHTML = paying.map(d => {
     const display = isMonthly ? d.monthly : d.annual;
     const barW = totalAnnual > 0 ? (d.annual / totalAnnual * 100) : 0;
-    return [
-      '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">',
-        '<div style="width:40px;font-weight:700;font-size:13px">' + d.ticker + '</div>',
-        '<div style="flex:1">',
-          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">',
-            '<span style="font-size:11px;color:var(--muted)">' + d.yieldPct.toFixed(2) + '% yield ' +
-              '<span style="font-size:10px;padding:1px 5px;border-radius:6px;background:rgba(0,229,160,0.1);color:var(--green)">LIVE</span>' +
-            '</span>',
-            '<span style="font-size:13px;font-weight:700;color:var(--green)">+$' + display.toFixed(2) + '</span>',
-          '</div>',
-          '<div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">',
-            '<div style="height:100%;width:' + barW + '%;background:var(--green);border-radius:2px"></div>',
-          '</div>',
-        '</div>',
-      '</div>'
-    ].join('');
-  }).join('') +
-  (nonPaying.length > 0 ?
-    '<div style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center">No dividends: ' +
-    nonPaying.map(d => d.ticker).join(', ') + '</div>'
-  : '');
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="width:40px;font-weight:700;font-size:13px">${d.ticker}</div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--muted)">${d.yieldPct.toFixed(2)}% yield</span>
+          <span style="font-size:13px;font-weight:700;color:var(--green)">+$${display.toFixed(2)}</span>
+        </div>
+        <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:var(--green);border-radius:2px"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + (nonPaying.length > 0 ? `<div style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center">No dividends: ${nonPaying.map(d => d.ticker).join(', ')}</div>` : '');
 }
 
 async function fetchDividendYield(ticker) {
-  // Try multiple proxies to get live dividend yield from Yahoo Finance
+  // Use the existing price cache response (meta has dividend yield)
+  const cached = stockCache[ticker];
+  if (cached && !cached.error && cached.dividendYield !== undefined) {
+    return cached.dividendYield;
+  }
+
+  // Fetch fresh if not in cache
   const proxies = [
     () => {
       const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + ticker + '?interval=1d&range=1d';
-      return 'https://corsproxy.io/?' + encodeURIComponent(url);
+      return fetchWithTimeout('https://corsproxy.io/?' + encodeURIComponent(url), 6000).then(r => r.json());
     },
     () => {
       const url = 'https://query2.finance.yahoo.com/v8/finance/chart/' + ticker + '?interval=1d&range=1d';
-      return 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+      return fetchWithTimeout('https://api.allorigins.win/get?url=' + encodeURIComponent(url), 6000)
+        .then(r => r.json()).then(raw => JSON.parse(raw.contents));
     }
   ];
-
-  for (let i = 0; i < proxies.length; i++) {
+  for (const proxy of proxies) {
     try {
-      const proxyUrl = proxies[i]();
-      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(6000) });
-      let data;
-      if (i === 0) {
-        data = await res.json();
-      } else {
-        const raw = await res.json();
-        data = JSON.parse(raw.contents);
-      }
+      const data = await proxy();
       const meta = data.chart.result[0].meta;
-      const yld = meta.trailingAnnualDividendYield;
+      const yld = meta.trailingAnnualDividendYield || meta.dividendYield;
       if (yld && yld > 0) return parseFloat((yld * 100).toFixed(4));
-      // Also check dividendYield field
-      const yld2 = meta.dividendYield;
-      if (yld2 && yld2 > 0) return parseFloat((yld2 * 100).toFixed(4));
       return 0;
-    } catch(e) {
-      continue;
-    }
+    } catch (e) { continue; }
   }
   return 0;
 }
@@ -2845,18 +2807,13 @@ function resetScreenshotSheet() {
 function handleScreenshotUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = (e) => {
     const dataUrl = e.target.result;
-    screenshotBase64 = dataUrl.split(',')[1]; // strip the data:image/...;base64, prefix
-
-    // Show preview
+    screenshotBase64 = dataUrl.split(',')[1];
     document.getElementById('screenshot-img').src = dataUrl;
     document.getElementById('screenshot-preview').style.display = 'block';
     document.getElementById('screenshot-analyze-btn').style.display = 'block';
-
-    // Update drop area
     document.getElementById('screenshot-drop-area').style.borderColor = 'rgba(0,229,160,0.6)';
     document.getElementById('screenshot-drop-area').style.background = 'rgba(0,229,160,0.05)';
   };
@@ -2865,91 +2822,49 @@ function handleScreenshotUpload(event) {
 
 async function analyzeScreenshot() {
   if (!screenshotBase64) { showToast('Please upload a screenshot first'); return; }
-
-  // Show loading
   document.getElementById('screenshot-step-1').style.display = 'none';
   document.getElementById('screenshot-loading').style.display = 'block';
-
   try {
     const res = await fetch('https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdybnRxaGN5d2JrYWtxdGZvenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTM0OTgsImV4cCI6MjA4ODIyOTQ5OH0.8EHk5hS2H01JvfHQYNKodOtsTmtYjF1QXCIIy7Z7dCU',
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1000,
         messages: [{
           role: 'user',
           content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: screenshotBase64
-              }
-            },
-            {
-              type: 'text',
-              text: `This is a brokerage portfolio screenshot. Extract ALL stock positions and return ONLY valid JSON, no markdown, no explanation:
-{
-  "stocks": [
-    {
-      "ticker": "AAPL",
-      "shares": 10.5,
-      "avgCost": 150.00,
-      "name": "Apple Inc"
-    }
-  ]
-}
-Rules:
-- ticker must be the stock symbol (e.g. AAPL, NVDA, TSLA)
-- shares must be a number
-- avgCost must be the average cost / average buy price per share as a number
-- If avgCost is not visible, use 0
-- Include ALL stocks visible in the screenshot
-- Return ONLY the JSON object, nothing else`
-            }
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: screenshotBase64 } },
+            { type: 'text', text: `Extract ALL stock positions from this portfolio screenshot. Return ONLY valid JSON:
+{"stocks":[{"ticker":"AAPL","shares":10.5,"avgCost":150.00,"name":"Apple Inc"}]}
+Rules: ticker=stock symbol, shares=number, avgCost=avg buy price (0 if not visible). Return ONLY JSON.` }
           ]
         }]
       })
     });
-
     const data = await res.json();
     const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
-
-    // Extract JSON
     const jsonStart = text.indexOf('{');
     const jsonEnd = text.lastIndexOf('}');
-    if (jsonStart === -1 || jsonEnd === -1) throw new Error('No JSON in response');
+    if (jsonStart === -1) throw new Error('No JSON');
     const parsed = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
-
-    if (!parsed.stocks || parsed.stocks.length === 0) throw new Error('No stocks detected');
-
+    if (!parsed.stocks || parsed.stocks.length === 0) throw new Error('No stocks found');
     detectedStocks = parsed.stocks.filter(s => s.ticker && s.shares > 0);
-
-    if (detectedStocks.length === 0) throw new Error('No valid stocks found');
-
-    // Show detected stocks
+    if (!detectedStocks.length) throw new Error('No valid stocks');
     document.getElementById('screenshot-loading').style.display = 'none';
     document.getElementById('screenshot-step-2').style.display = 'block';
     renderDetectedStocks();
-
-  } catch(e) {
+  } catch (e) {
     document.getElementById('screenshot-loading').style.display = 'none';
     document.getElementById('screenshot-step-1').style.display = 'block';
     showToast('❌ Could not read screenshot. Try a clearer image.');
-    console.error('Screenshot analysis error:', e);
   }
 }
 
 function renderDetectedStocks() {
-  const list = document.getElementById('screenshot-detected-list');
-  list.innerHTML = detectedStocks.map((s, i) => `
+  document.getElementById('screenshot-detected-list').innerHTML = detectedStocks.map((s, i) => `
     <div style="background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
-      <div style="width:40px;height:40px;border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--blue)">${s.ticker.substring(0,2)}</div>
+      <div style="width:40px;height:40px;border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--blue)">${s.ticker.substring(0, 2)}</div>
       <div style="flex:1">
         <div style="font-weight:700;font-size:14px">${s.ticker}</div>
         <div style="font-size:12px;color:var(--muted)">${s.name || s.ticker} · ${s.shares} shares</div>
@@ -2958,58 +2873,41 @@ function renderDetectedStocks() {
         <div style="font-size:13px;font-weight:600">avg $${s.avgCost > 0 ? s.avgCost.toFixed(2) : '—'}</div>
         <div onclick="removeDetectedStock(${i})" style="font-size:11px;color:var(--red);cursor:pointer;margin-top:2px">✕ remove</div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 function removeDetectedStock(index) {
   detectedStocks.splice(index, 1);
-  if (detectedStocks.length === 0) {
-    resetScreenshotSheet();
-    showToast('No stocks left — try again');
-  } else {
-    renderDetectedStocks();
-  }
+  if (!detectedStocks.length) { resetScreenshotSheet(); showToast('No stocks left — try again'); }
+  else renderDetectedStocks();
 }
 
 async function syncDetectedStocks() {
-  if (detectedStocks.length === 0) return;
-
+  if (!detectedStocks.length) return;
   const btn = document.querySelector('#screenshot-sheet button[onclick="syncDetectedStocks()"]');
   if (btn) { btn.textContent = '⏳ Syncing...'; btn.disabled = true; }
-
   let added = 0, updated = 0, skipped = 0;
-
   for (const s of detectedStocks) {
     const ticker = s.ticker.toUpperCase().trim();
     const shares = parseFloat(s.shares) || 0;
     const cost = parseFloat(s.avgCost) || 0;
     if (!ticker || shares <= 0) { skipped++; continue; }
-
     const existing = holdings.find(h => h.ticker === ticker);
-
     try {
       if (existing) {
-        // Update existing holding
         existing.shares = shares;
         if (cost > 0) existing.cost = cost;
         await updateHoldingInSupabase(existing.id, existing.shares, existing.cost);
         updated++;
       } else {
-        // Add new holding
-        const finalCost = cost > 0 ? cost : 1;
-        const newHolding = { ticker, shares, cost: finalCost };
+        const newHolding = { ticker, shares, cost: cost > 0 ? cost : 1 };
         const saved = await addHoldingToSupabase(newHolding);
         if (saved) newHolding.id = saved.id;
         holdings.push(newHolding);
         added++;
       }
-    } catch(e) {
-      console.error('Sync error for', ticker, e);
-      skipped++;
-    }
+    } catch (e) { skipped++; }
   }
-
   closeSheet('screenshot');
   resetScreenshotSheet();
   showToast(`✅ Synced! +${added} new, ${updated} updated${skipped > 0 ? ', ' + skipped + ' skipped' : ''}`);
@@ -3021,7 +2919,6 @@ async function syncDetectedStocks() {
 // ==========================================
 loadSavedTheme();
 
-// Check Supabase session on load
 sb.auth.getSession().then(({ data: { session } }) => {
   if (session && session.user) {
     onSignedIn(session.user);
@@ -3030,25 +2927,14 @@ sb.auth.getSession().then(({ data: { session } }) => {
   }
 });
 
-// Listen for auth state changes (handles Google OAuth redirect)
 sb.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN' && session) {
-    onSignedIn(session.user);
-  } else if (event === 'SIGNED_OUT') {
-    showAuthScreen();
-  }
+  if (event === 'SIGNED_IN' && session) onSignedIn(session.user);
+  else if (event === 'SIGNED_OUT') showAuthScreen();
 });
-
-// Auto-refresh prices every 2 minutes
-setInterval(() => {
-  if (currentUser && document.getElementById('page-portfolio') && document.getElementById('page-portfolio').classList.contains('active')) {
-    stockCache = {};
-    renderPortfolio();
-  }
-}, 120000);
 
 </script>
 
+<!-- THEME SHEET -->
 <div class="sheet-overlay" id="theme-overlay" onclick="closeSheet('theme')"></div>
 <div class="sheet" id="theme-sheet">
   <div class="sheet-handle"></div>
@@ -3085,5 +2971,6 @@ setInterval(() => {
   </div>
   <p style="font-size:13px;color:var(--muted);text-align:center">Your theme is saved automatically</p>
 </div>
+
 </body>
 </html>
