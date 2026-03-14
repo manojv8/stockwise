@@ -2637,30 +2637,39 @@ async function buildChartData(range, currentValue, totalCost) {
 }
 
 async function fetchHistoricalPrices(ticker, days, interval) {
-  // Historical price fetch via stooq.com — returns CSV with date+close
-  // stooq supports date ranges via d1/d2 params (YYYYMMDD format)
-  try {
-    const now = new Date();
-    const past = new Date(now - days * 86400 * 1000);
-    const fmt = d => d.toISOString().slice(0,10).replace(/-/g,'');
-    const stooqTicker = ticker.toLowerCase().replace('.', '-') + '.us';
-    const url = `https://stooq.com/q/d/l/?s=${stooqTicker}&d1=${fmt(past)}&d2=${fmt(now)}&i=d`;
-    const res = await fetchWithTimeout(url, 10000);
-    if (!res.ok) throw new Error('stooq error');
-    const csv = await res.text();
-    const lines = csv.trim().split('\n').slice(1); // skip header
-    if (lines.length < 2) throw new Error('Not enough data');
-    // CSV: Date,Open,High,Low,Close,Volume
-    return lines.map(line => {
-      const parts = line.split(',');
-      const dateStr = parts[0]; // YYYY-MM-DD
-      const close = parseFloat(parts[4]);
-      if (!dateStr || !close || close <= 0) return null;
-      return { date: new Date(dateStr).getTime() / 1000, price: close };
-    }).filter(Boolean);
-  } catch(e) {
-    return []; // Will fall through to generateSimulatedChart
+  // Use Alpaca bars endpoint — already authenticated, reliable CORS
+  // Maps chart interval to Alpaca timeframe
+  if (ALPACA_KEY && ALPACA_SECRET) {
+    try {
+      const timeframeMap = { '1D': '1Day', '1H': '1Hour', '15Min': '15Min' };
+      const alpacaTimeframe = timeframeMap[interval] || '1Day';
+      const start = new Date(Date.now() - days * 86400 * 1000).toISOString().slice(0, 10);
+      const end   = new Date().toISOString().slice(0, 10);
+      const url = `https://data.alpaca.markets/v2/stocks/${encodeURIComponent(ticker)}/bars` +
+        `?timeframe=${alpacaTimeframe}&start=${start}&end=${end}&limit=1000&feed=iex&adjustment=split`;
+
+      const res = await fetchWithTimeout(url, 12000, {
+        headers: {
+          'APCA-API-KEY-ID': ALPACA_KEY,
+          'APCA-API-SECRET-KEY': ALPACA_SECRET,
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const bars = data.bars || [];
+        if (bars.length >= 2) {
+          return bars.map(b => ({
+            date: new Date(b.t).getTime() / 1000,
+            price: b.c, // closing price
+          }));
+        }
+      }
+    } catch(e) {
+      console.warn('Alpaca historical bars failed for', ticker, e.message);
+    }
   }
+  return []; // Falls through to generateSimulatedChart
 }
 
 function generateSimulatedChart(range, currentValue, totalCost) {
@@ -2769,20 +2778,15 @@ async function loadDividendTile(priceMap) {
   const totalEl = document.getElementById('div-total');
   if (totalEl) totalEl.textContent = '...';
 
-  // Fetch yields for all holdings in parallel via Alpaca
-  const yieldResults = await Promise.all(holdings.map(async h => {
-    const yieldPct = await fetchDividendYield(h.ticker, priceMap[h.ticker]?.price || h.cost);
-    return { ticker: h.ticker, yieldPct };
-  }));
-
-  const yieldMap = {};
-  yieldResults.forEach(r => yieldMap[r.ticker] = r.yieldPct);
+  // ONE batch call for all holdings — no per-ticker requests
+  const tickers = holdings.map(h => h.ticker.toUpperCase());
+  const yieldMap = await fetchAllDividendYields(tickers, priceMap);
 
   for (const h of holdings) {
     const p = priceMap[h.ticker];
     const price = p && p.price ? p.price : h.cost;
     const value = price * h.shares;
-    const yieldPct = yieldMap[h.ticker] || 0;
+    const yieldPct = yieldMap[h.ticker.toUpperCase()] || 0;
     const annualIncome = value * (yieldPct / 100);
     divData.push({ ticker: h.ticker, shares: h.shares, price, yieldPct, annual: annualIncome, monthly: annualIncome / 12, value });
   }
@@ -2825,90 +2829,112 @@ function renderDividendBreakdown() {
 }
 
 /**
- * Fetch dividend yield dynamically via Alpaca corporate actions API.
- *
- * Strategy:
- *   1. Return cache if < 24h old
- *   2. Fetch last 12 months of cash dividend announcements from Alpaca
- *   3. Sum per-share cash amounts over last 12 months → annualized dividend
- *   4. Divide by current price → yield %
- *   5. Fall back to KNOWN_YIELDS if Alpaca fails or keys not set
- *
- * Uses TWO Alpaca endpoints (one is the deprecated trading API fallback):
- *   PRIMARY:  data.alpaca.markets/v1beta1/corporate-actions?symbols=X&types=cash_dividend
- *   FALLBACK: paper-api.alpaca.markets/v2/corporate_actions/announcements (deprecated but still works)
- *
- * @param {string} ticker
- * @param {number} currentPrice  — needed to compute yield from raw $ dividends
+ * Batch fetch dividend yields for ALL tickers in ONE Alpaca request.
+ * Returns { TICKER: yieldPct } map.
  */
-async function fetchDividendYield(ticker, currentPrice = 0) {
-  const key = ticker.toUpperCase();
+async function fetchAllDividendYields(tickers, priceMap) {
+  const yieldMap = {};
+  const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const until = new Date().toISOString().slice(0, 10);
 
-  // 1. Cache hit
-  if (dividendCache[key] && (Date.now() - dividendCache[key].ts < DIVIDEND_CACHE_TTL)) {
-    return dividendCache[key].yieldPct;
-  }
+  // Check which tickers need fetching (not cached)
+  const toFetch = tickers.filter(t => {
+    const c = dividendCache[t];
+    return !c || (Date.now() - c.ts > DIVIDEND_CACHE_TTL);
+  });
 
-  if (ALPACA_KEY && ALPACA_SECRET && currentPrice > 0) {
+  // Serve cached values first
+  tickers.forEach(t => {
+    if (dividendCache[t]) yieldMap[t] = dividendCache[t].yieldPct;
+  });
+
+  if (toFetch.length === 0) return yieldMap;
+
+  if (ALPACA_KEY && ALPACA_SECRET) {
     const headers = {
       'APCA-API-KEY-ID': ALPACA_KEY,
       'APCA-API-SECRET-KEY': ALPACA_SECRET,
     };
-    const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const until = new Date().toISOString().slice(0, 10);
 
-    // 2a. PRIMARY: new data API — returns { cash_dividends: [{symbol, rate, ex_date, ...}] }
     try {
+      // ONE request for all tickers — comma-separated symbols param
+      const symbolsParam = toFetch.join(',');
       const url = `https://data.alpaca.markets/v1beta1/corporate-actions` +
-        `?symbols=${key}&types=cash_dividend&start=${since}&end=${until}&limit=50`;
-      const res = await fetchWithTimeout(url, 10000, { headers });
+        `?symbols=${encodeURIComponent(symbolsParam)}&types=cash_dividend&start=${since}&end=${until}&limit=1000`;
+
+      const res = await fetchWithTimeout(url, 15000, { headers });
       if (res.ok) {
         const data = await res.json();
-        // Actual shape: { corporate_actions: { cash_dividends: [ {symbol, rate, ex_date, ...} ] } }
-        // cash_dividends is a FLAT ARRAY, not keyed by ticker
-        const divs = (data.corporate_actions?.cash_dividends || [])
-          .filter(d => parseFloat(d.rate) > 0);
-        if (divs.length > 0) {
-          const annualCash = divs.reduce((s, d) => s + parseFloat(d.rate), 0);
-          const yieldPct = parseFloat(((annualCash / currentPrice) * 100).toFixed(4));
-          dividendCache[key] = { yieldPct, ts: Date.now() };
-          return yieldPct;
-        }
-        // 200 response but no dividends — confirmed zero payer, cache it
-        dividendCache[key] = { yieldPct: 0, ts: Date.now() };
-        return 0;
-      }
-    } catch(e) {
-      console.warn('Alpaca data API dividend failed for', key, ':', e.message);
-    }
+        // Shape: { corporate_actions: { cash_dividends: [ {symbol, rate, ...} ] } }
+        const allDivs = data.corporate_actions?.cash_dividends || [];
 
-    // 2b. FALLBACK: older trading API announcements endpoint (still works as of 2025)
-    try {
-      const url = `https://paper-api.alpaca.markets/v2/corporate_actions/announcements` +
-        `?ca_types=Dividend&since=${since}&until=${until}&symbol=${key}&date_type=ex_date`;
-      const res = await fetchWithTimeout(url, 10000, { headers });
-      if (res.ok) {
-        const announcements = await res.json();
-        const cashDivs = (Array.isArray(announcements) ? announcements : [])
-          .filter(a => a.ca_sub_type === 'cash' && parseFloat(a.cash) > 0);
-        if (cashDivs.length > 0) {
-          const annualCash = cashDivs.reduce((s, a) => s + parseFloat(a.cash), 0);
-          const yieldPct = parseFloat(((annualCash / currentPrice) * 100).toFixed(4));
-          dividendCache[key] = { yieldPct, ts: Date.now() };
-          return yieldPct;
-        }
-        dividendCache[key] = { yieldPct: 0, ts: Date.now() };
-        return 0;
+        // Group payments by ticker — track count + sum to infer frequency
+        const divsByTicker = {};
+        allDivs.forEach(d => {
+          const sym = (d.symbol || '').toUpperCase();
+          const rate = parseFloat(d.rate);
+          if (!sym || rate <= 0) return;
+          if (!divsByTicker[sym]) divsByTicker[sym] = { total: 0, count: 0, payments: [] };
+          divsByTicker[sym].total += rate;
+          divsByTicker[sym].count += 1;
+          divsByTicker[sym].payments.push({ rate, ex_date: d.ex_date });
+        });
+
+        // Compute annualized dividend — extrapolate if fewer than expected payments
+        toFetch.forEach(t => {
+          const d = divsByTicker[t];
+          const price = priceMap[t]?.price || 0;
+          let yieldPct = 0;
+          if (d && d.count > 0 && price > 0) {
+            const avgPayment = d.total / d.count;
+            // Infer annual frequency from count in 12-month window:
+            // 1 payment → quarterly assumed (×4), 2 → semi-annual (×2), 4+ → use actual sum
+            // Monthly payers (12+) also use actual sum
+            let annualCash;
+            if (d.count >= 4) {
+              annualCash = d.total; // enough data — use actual sum
+            } else if (d.count === 2) {
+              annualCash = avgPayment * 2; // semi-annual
+            } else {
+              annualCash = avgPayment * 4; // assume quarterly (most common)
+            }
+            yieldPct = parseFloat(((annualCash / price) * 100).toFixed(4));
+          }
+          dividendCache[t] = { yieldPct, ts: Date.now() };
+          yieldMap[t] = yieldPct;
+        });
+
+        return yieldMap;
       }
     } catch(e) {
-      console.warn('Alpaca announcements fallback failed for', key, ':', e.message);
+      console.warn('Alpaca batch dividend fetch failed:', e.message);
     }
   }
 
-  // 3. Last resort: KNOWN_YIELDS static table
-  const fallback = KNOWN_YIELDS.hasOwnProperty(key) ? KNOWN_YIELDS[key] : 0;
-  dividendCache[key] = { yieldPct: fallback, ts: Date.now() };
-  return fallback;
+  // Fallback: KNOWN_YIELDS for anything not yet resolved
+  toFetch.forEach(t => {
+    if (yieldMap[t] === undefined) {
+      const fallback = KNOWN_YIELDS[t] || 0;
+      dividendCache[t] = { yieldPct: fallback, ts: Date.now() };
+      yieldMap[t] = fallback;
+    }
+  });
+
+  return yieldMap;
+}
+
+/**
+ * Single-ticker dividend yield — used outside the dashboard (e.g. holding detail).
+ * Delegates to the batch function for consistency.
+ */
+async function fetchDividendYield(ticker, currentPrice = 0) {
+  const key = ticker.toUpperCase();
+  if (dividendCache[key] && (Date.now() - dividendCache[key].ts < DIVIDEND_CACHE_TTL)) {
+    return dividendCache[key].yieldPct;
+  }
+  const fakeMap = { [key]: { price: currentPrice } };
+  const result = await fetchAllDividendYields([key], fakeMap);
+  return result[key] || 0;
 }
 
 // ==========================================
