@@ -705,8 +705,9 @@ const COLORS = ['#5b8fff','#a78bfa','#00e5a0','#f5c842','#ff4d6d','#38bdf8','#fb
  */
 async function fetchIndiaPricesViaAlpha(tickers) {
   const result = {};
-
+  
   for (const ticker of tickers) {
+    console.log("Calling Alpha for:", ticker);
     const key = ticker.toUpperCase();
 
     try {
@@ -792,10 +793,7 @@ async function fetchIndiaPricesBatch(tickers, onUpdate, forceRefresh) {
   if (!tickers || !tickers.length) return {};
   const cache = indiaCache;
 
-  const toFetch = forceRefresh ? tickers.slice() : tickers.filter(function(t) {
-    const c = cache[t.toUpperCase()];
-    return !c || c.error || (Date.now() - c.ts > CACHE_TTL);
-  });
+  const toFetch = tickers.slice();
 
   const pMap = {};
 
