@@ -768,7 +768,7 @@ async function fetchSingleIndiaPrice(ticker) {
 
   // Try proxy batch with single ticker
   try {
-    const batch = await fetchIndiaPricesViaProxy([key]);
+    const batch = await fetchIndiaPricesViaAlpha([key]);
     if (batch[key] && !batch[key].error && batch[key].price) {
       cache[key] = batch[key];
       return batch[key];
