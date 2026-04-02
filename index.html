@@ -1036,16 +1036,32 @@ async function fetchSinglePrice(ticker, market, force) {
 // ==========================================
 async function fetchFxRate() {
   try {
-    const res = await fetchWithTimeout('https://stooq.com/q/l/?s=inrusd&f=sd2t2ohlcv&h&e=csv', 8000);
-    const csv = await res.text();
-    const lines = csv.trim().split('\n');
-    if (lines.length >= 2) {
-      const parts = lines[lines.length - 1].split(',');
-      const close = parseFloat(parts[6]) || parseFloat(parts[5]);
-      if (close && close > 0) { usdPerInr = close; fxRateINR = 1 / close; updateFxDisplays(); return; }
+    const res = await fetch(
+      `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=INR&apikey=${ALPHA_VANTAGE_KEY}`
+    );
+
+    const data = await res.json();
+
+    const rate = data["Realtime Currency Exchange Rate"]?.["5. Exchange Rate"];
+
+    if (rate && parseFloat(rate) > 0) {
+      fxRateINR = parseFloat(rate);        // USD → INR
+      usdPerInr = 1 / fxRateINR;           // INR → USD
+      updateFxDisplays();
+      console.log("✅ FX from Alpha:", fxRateINR);
+      return;
     }
-  } catch(e) {}
-  usdPerInr = 1 / 83.5; fxRateINR = 83.5; updateFxDisplays();
+
+    throw new Error("Invalid FX data");
+
+  } catch (e) {
+    console.warn("⚠️ Alpha FX failed, using fallback");
+
+    // fallback (last known or default)
+    fxRateINR = fxRateINR || 83.5;
+    usdPerInr = 1 / fxRateINR;
+    updateFxDisplays();
+  }
 }
 
 function updateFxDisplays() {
