@@ -670,7 +670,7 @@ const ALPACA_KEY    = 'PKSEEOBT7RFZ6TLRLA33D7V6LF';
 const ALPACA_SECRET = 'GX1h4Mymma6cU639S1dGbJcJjvSXZKRWnqQJE6VvtjVj';
 const ALPACA_BASE   = 'https://data.alpaca.markets/v2';
 const PROXY = 'https://grntqhcywbkakqtfozpi.supabase.co/functions/v1/anthropic-proxy';
-const ALPHA_VANTAGE_KEY = "ZNMQLWBZ23PF3MV9";
+
 // ==========================================
 // STATE
 // ==========================================
@@ -703,59 +703,72 @@ const COLORS = ['#5b8fff','#a78bfa','#00e5a0','#f5c842','#ff4d6d','#38bdf8','#fb
  *
  * We send all tickers in a single AI call that fetches each via web_search tool.
  */
-async function fetchIndiaPricesViaAlpha(tickers) {
-  const result = {};
-  
-  for (const ticker of tickers) {
-    console.log("Calling Alpha for:", ticker);
-    const key = ticker.toUpperCase();
+async function fetchIndiaPricesViaProxy(tickers) {
+  if (!tickers || !tickers.length) return {};
 
-    try {
-      // ✅ Try Alpha Vantage (BSE)
-      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${key}.BSE&apikey=${ALPHA_VANTAGE_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
+  // Build Yahoo Finance NS symbols
+  const ySymbols = tickers.map(t => t.toUpperCase().trim() + '.NS');
 
-      const q = data["Global Quote"];
+  // We ask the AI to fetch Yahoo Finance chart data for each ticker
+  // and return structured JSON — this runs server-side so CORS is avoided
+  const prompt = `Fetch current stock price data from Yahoo Finance for these NSE India stocks: ${ySymbols.join(', ')}
 
-      if (q && q["05. price"] && parseFloat(q["05. price"]) > 0) {
-        result[key] = {
-          ticker: key,
-          price: parseFloat(q["05. price"]),
-          change: parseFloat(q["09. change"]) || 0,
-          changePct: parseFloat((q["10. change percent"] || "0").replace('%','')) || 0,
-          name: key,
-          error: false,
-          source: "alpha",
-          ts: Date.now()
-        };
-        continue; // ✅ SUCCESS → skip fallback
-      }
-    } catch (e) {}
+For each stock, fetch the URL: https://query1.finance.yahoo.com/v8/finance/chart/SYMBOL (replace SYMBOL with each ticker like RELIANCE.NS)
 
-    try {
-      // ✅ Fallback to Stooq (WORKS reliably for India)
-      const stooq = await fetchPricesSingleStooq(key, 'india');
+Return ONLY a JSON object with this exact structure (no markdown, no explanation):
+{
+  "prices": [
+    {"ticker": "RELIANCE", "price": 2456.75, "change": 12.30, "changePct": 0.50, "name": "Reliance Industries Limited", "error": false},
+    {"ticker": "TCS", "price": 3890.00, "change": -15.50, "changePct": -0.40, "name": "Tata Consultancy Services", "error": false}
+  ]
+}
+
+If a stock cannot be fetched, set error:true and price:null. Return ALL ${tickers.length} tickers even if some fail.`;
+
+  try {
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) throw new Error('Proxy HTTP ' + res.status);
+    const data = await res.json();
+
+    // Extract text content from response
+    const textContent = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+    const js = textContent.indexOf('{');
+    const je = textContent.lastIndexOf('}');
+    if (js === -1) throw new Error('No JSON in response');
+
+    const parsed = JSON.parse(textContent.substring(js, je + 1));
+    const result = {};
+
+    (parsed.prices || []).forEach(function(item) {
+      if (!item.ticker) return;
+      const key = item.ticker.toUpperCase().replace('.NS', '').replace('.BO', '');
       result[key] = {
-        ...stooq,
-        source: "stooq"
+        ticker: key,
+        price: item.error ? null : parseFloat(item.price) || null,
+        change: parseFloat(item.change) || 0,
+        changePct: parseFloat(item.changePct) || 0,
+        name: item.name || key,
+        error: !!item.error || !item.price,
+        source: 'yahoo-proxy',
+        ts: Date.now()
       };
-      continue;
-    } catch (e) {}
+    });
 
-    // ❌ Final fallback
-    result[key] = {
-      ticker: key,
-      price: null,
-      change: 0,
-      changePct: 0,
-      name: key,
-      error: true,
-      ts: Date.now()
-    };
+    return result;
+  } catch(e) {
+    console.warn('India proxy fetch failed:', e.message);
+    return {};
   }
-
-  return result;
 }
 
 /**
@@ -768,7 +781,7 @@ async function fetchSingleIndiaPrice(ticker) {
 
   // Try proxy batch with single ticker
   try {
-    const batch = await fetchIndiaPricesViaAlpha([key]);
+    const batch = await fetchIndiaPricesViaProxy([key]);
     if (batch[key] && !batch[key].error && batch[key].price) {
       cache[key] = batch[key];
       return batch[key];
@@ -793,7 +806,10 @@ async function fetchIndiaPricesBatch(tickers, onUpdate, forceRefresh) {
   if (!tickers || !tickers.length) return {};
   const cache = indiaCache;
 
-  const toFetch = tickers.slice();
+  const toFetch = forceRefresh ? tickers.slice() : tickers.filter(function(t) {
+    const c = cache[t.toUpperCase()];
+    return !c || c.error || (Date.now() - c.ts > CACHE_TTL);
+  });
 
   const pMap = {};
 
@@ -811,7 +827,7 @@ async function fetchIndiaPricesBatch(tickers, onUpdate, forceRefresh) {
   for (let i = 0; i < toFetch.length; i += CHUNK) {
     const chunk = toFetch.slice(i, i + CHUNK);
     try {
-      const result = await fetchIndiaPricesViaAlpha(chunk);
+      const result = await fetchIndiaPricesViaProxy(chunk);
       Object.assign(pMap, result);
       Object.assign(cache, result);
       if (onUpdate) {
@@ -1036,32 +1052,16 @@ async function fetchSinglePrice(ticker, market, force) {
 // ==========================================
 async function fetchFxRate() {
   try {
-    const res = await fetch(
-      `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=INR&apikey=${ALPHA_VANTAGE_KEY}`
-    );
-
-    const data = await res.json();
-
-    const rate = data["Realtime Currency Exchange Rate"]?.["5. Exchange Rate"];
-
-    if (rate && parseFloat(rate) > 0) {
-      fxRateINR = parseFloat(rate);        // USD → INR
-      usdPerInr = 1 / fxRateINR;           // INR → USD
-      updateFxDisplays();
-      console.log("✅ FX from Alpha:", fxRateINR);
-      return;
+    const res = await fetchWithTimeout('https://stooq.com/q/l/?s=inrusd&f=sd2t2ohlcv&h&e=csv', 8000);
+    const csv = await res.text();
+    const lines = csv.trim().split('\n');
+    if (lines.length >= 2) {
+      const parts = lines[lines.length - 1].split(',');
+      const close = parseFloat(parts[6]) || parseFloat(parts[5]);
+      if (close && close > 0) { usdPerInr = close; fxRateINR = 1 / close; updateFxDisplays(); return; }
     }
-
-    throw new Error("Invalid FX data");
-
-  } catch (e) {
-    console.warn("⚠️ Alpha FX failed, using fallback");
-
-    // fallback (last known or default)
-    fxRateINR = fxRateINR || 83.5;
-    usdPerInr = 1 / fxRateINR;
-    updateFxDisplays();
-  }
+  } catch(e) {}
+  usdPerInr = 1 / 83.5; fxRateINR = 83.5; updateFxDisplays();
 }
 
 function updateFxDisplays() {
