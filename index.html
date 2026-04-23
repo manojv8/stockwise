@@ -262,6 +262,10 @@
   body.theme-light .input-field{background:#f5f5f7;border-color:rgba(0,0,0,.1);color:#1a1a2e}
   body.theme-light .stat{background:rgba(0,0,0,.04)}
   body.theme-light .nw-seg{background:rgba(0,0,0,.04)}
+
+  /* India price source badge */
+  .yf-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:8px;font-size:9px;font-weight:700;background:rgba(0,229,160,.1);color:var(--green);border:1px solid rgba(0,229,160,.2);margin-left:5px;vertical-align:middle}
+  .india-price-info{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,153,51,.05);border:1px solid rgba(255,153,51,.1);border-radius:8px;margin-bottom:10px}
 </style>
 </head>
 <body class="theme-midnight">
@@ -396,8 +400,12 @@
       </div>
       <div id="india-price-status" style="display:none" class="price-status-bar">
         <div class="price-status-dot fetching" id="india-status-dot"></div>
-        <span id="india-status-text">Fetching NSE/BSE prices via Yahoo Finance...</span>
+        <span id="india-status-text">Fetching NSE prices via Yahoo Finance...</span>
         <button class="retry-btn" onclick="forceRefreshPrices('india')" id="india-retry-btn" style="display:none;margin-left:auto">↺ Retry</button>
+      </div>
+      <div class="india-price-info" id="india-price-info" style="display:none">
+        <span>📡</span>
+        <span id="india-price-info-text">Prices via Yahoo Finance (NSE) · No API key · Unlimited refreshes</span>
       </div>
       <div class="section-header">
         <div class="section-title">India Holdings</div>
@@ -476,7 +484,7 @@
       <div class="india-header-accent"></div>
       <div class="market-overview" id="india-market-indices"></div>
       <div style="background:rgba(255,153,51,.07);border:1px solid rgba(255,153,51,.15);border-radius:12px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--muted)">
-        📊 Prices via Yahoo Finance (NSE data) · Values in ₹ INR
+        📡 Prices via Yahoo Finance (NSE) · Free, no limits · Values in ₹ INR
       </div>
       <div class="section-header"><div class="section-title">India Watchlist</div><button class="section-action" onclick="openWatchlistSheet('india')" style="background:rgba(255,153,51,.1);color:var(--saffron);border:1px solid rgba(255,153,51,.2)">+ Add</button></div>
       <div id="india-watchlist-list"></div>
@@ -689,106 +697,221 @@ const CACHE_TTL = 5 * 60 * 1000;
 const COLORS = ['#5b8fff','#a78bfa','#00e5a0','#f5c842','#ff4d6d','#38bdf8','#fb7185','#34d399','#FF9933','#e879f9'];
 
 // ==========================================
-// INDIA PRICE ENGINE — Yahoo Finance via AI proxy
-// The key insight: instead of calling Yahoo Finance directly (blocked by CORS),
-// we call our Anthropic proxy with a tool_choice for web_search which can fetch
-// Yahoo Finance data server-side. For batch fetches we use a dedicated Yahoo
-// Finance JSON API approach via the proxy.
+// INDIA PRICE ENGINE — Yahoo Finance via CORS proxies
+// FREE, no API key, no rate limits, unlimited refreshes
+// Proxy chain: corsproxy.io → allorigins.win → thingproxy → stooq fallback
 // ==========================================
 
 /**
- * Fetch Indian stock prices via Yahoo Finance JSON API routed through the Supabase proxy.
- * Yahoo Finance API: https://query1.finance.yahoo.com/v8/finance/chart/RELIANCE.NS
- * This is called server-side so CORS is not an issue.
- *
- * We send all tickers in a single AI call that fetches each via web_search tool.
+ * Build Yahoo Finance URL variants for a given NSE symbol.
+ * Tries both .NS (NSE) and .BO (BSE) exchanges, multiple proxies per exchange.
+ * Returns an array of fetch functions to try in order.
  */
-async function fetchIndiaPricesViaProxy(tickers) {
-  if (!tickers || !tickers.length) return {};
-
-  // Build Yahoo Finance NS symbols
-  const ySymbols = tickers.map(t => t.toUpperCase().trim() + '.NS');
-
-  // We ask the AI to fetch Yahoo Finance chart data for each ticker
-  // and return structured JSON — this runs server-side so CORS is avoided
-  const prompt = `Fetch current stock price data from Yahoo Finance for these NSE India stocks: ${ySymbols.join(', ')}
-
-For each stock, fetch the URL: https://query1.finance.yahoo.com/v8/finance/chart/SYMBOL (replace SYMBOL with each ticker like RELIANCE.NS)
-
-Return ONLY a JSON object with this exact structure (no markdown, no explanation):
-{
-  "prices": [
-    {"ticker": "RELIANCE", "price": 2456.75, "change": 12.30, "changePct": 0.50, "name": "Reliance Industries Limited", "error": false},
-    {"ticker": "TCS", "price": 3890.00, "change": -15.50, "changePct": -0.40, "name": "Tata Consultancy Services", "error": false}
-  ]
-}
-
-If a stock cannot be fetched, set error:true and price:null. Return ALL ${tickers.length} tickers even if some fail.`;
-
-  try {
-    const res = await fetch(PROXY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1000,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    if (!res.ok) throw new Error('Proxy HTTP ' + res.status);
-    const data = await res.json();
-
-    // Extract text content from response
-    const textContent = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
-    const js = textContent.indexOf('{');
-    const je = textContent.lastIndexOf('}');
-    if (js === -1) throw new Error('No JSON in response');
-
-    const parsed = JSON.parse(textContent.substring(js, je + 1));
-    const result = {};
-
-    (parsed.prices || []).forEach(function(item) {
-      if (!item.ticker) return;
-      const key = item.ticker.toUpperCase().replace('.NS', '').replace('.BO', '');
-      result[key] = {
-        ticker: key,
-        price: item.error ? null : parseFloat(item.price) || null,
-        change: parseFloat(item.change) || 0,
-        changePct: parseFloat(item.changePct) || 0,
-        name: item.name || key,
-        error: !!item.error || !item.price,
-        source: 'yahoo-proxy',
-        ts: Date.now()
-      };
-    });
-
-    return result;
-  } catch(e) {
-    console.warn('India proxy fetch failed:', e.message);
-    return {};
-  }
+function getYFProxies(nseTicker) {
+  const t = nseTicker.toUpperCase();
+  const nsUrl1 = `https://query1.finance.yahoo.com/v8/finance/chart/${t}.NS?interval=1d&range=5d`;
+  const nsUrl2 = `https://query2.finance.yahoo.com/v8/finance/chart/${t}.NS?interval=1d&range=2d`;
+  const boUrl1 = `https://query1.finance.yahoo.com/v8/finance/chart/${t}.BO?interval=1d&range=5d`;
+  const boUrl2 = `https://query2.finance.yahoo.com/v8/finance/chart/${t}.BO?interval=1d&range=2d`;
+  return [
+    // NSE attempts
+    () => fetchWithTimeout(`https://corsproxy.io/?url=${encodeURIComponent(nsUrl1)}`, 12000),
+    () => fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(nsUrl1)}`, 12000),
+    () => fetchWithTimeout(`https://corsproxy.io/?url=${encodeURIComponent(nsUrl2)}`, 10000),
+    // BSE fallback (many small/mid-caps trade better on BSE via Yahoo)
+    () => fetchWithTimeout(`https://corsproxy.io/?url=${encodeURIComponent(boUrl1)}`, 12000),
+    () => fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(boUrl2)}`, 10000),
+    // thingproxy fallback (sometimes works when others are down)
+    () => fetchWithTimeout(`https://thingproxy.freeboard.io/fetch/${nsUrl1}`, 10000),
+  ];
 }
 
 /**
- * Single India stock price fetch — tries proxy first, falls back to stooq
+ * Parse Yahoo Finance chart API JSON into our standard price object.
+ * Handles both direct JSON and allorigins-wrapped JSON.
+ */
+function parseYFResponse(text, ticker) {
+  let json;
+  // allorigins wraps response in {contents: "..."}
+  if (text.trimStart().startsWith('{') && text.includes('"contents"')) {
+    try {
+      const outer = JSON.parse(text);
+      if (outer.contents) {
+        json = JSON.parse(outer.contents);
+      } else {
+        json = outer;
+      }
+    } catch(e) {
+      json = JSON.parse(text);
+    }
+  } else {
+    json = JSON.parse(text);
+  }
+
+  const result = json?.chart?.result?.[0];
+  if (!result) throw new Error('No chart result');
+
+  const meta = result.meta;
+  // Prefer regularMarketPrice, then latest close from indicators
+  let price = meta?.regularMarketPrice;
+  if (!price || price <= 0) {
+    const closes = result?.indicators?.quote?.[0]?.close;
+    if (closes && closes.length) {
+      price = closes.filter(Boolean).pop();
+    }
+  }
+  if (!price || price <= 0) throw new Error('Invalid price: ' + price);
+
+  const prevClose = meta?.chartPreviousClose || meta?.previousClose || price;
+  const change = price - prevClose;
+  const changePct = prevClose > 0 ? (change / prevClose) * 100 : 0;
+  const name = meta?.longName || meta?.shortName || ticker.toUpperCase();
+
+  return {
+    ticker: ticker.toUpperCase(),
+    price: +price.toFixed(4),
+    change: +change.toFixed(4),
+    changePct: +changePct.toFixed(4),
+    name,
+    error: false,
+    source: 'yahoo',
+    ts: Date.now()
+  };
+}
+
+/**
+ * Fetch a single Indian NSE stock price via Yahoo Finance proxies.
+ * Tries each proxy in order, returns first successful result.
+ */
+async function fetchYahooSinglePrice(ticker) {
+  const proxies = getYFProxies(ticker);
+  let lastError;
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      const res = await proxies[i]();
+      if (!res.ok) {
+        lastError = new Error(`HTTP ${res.status}`);
+        continue;
+      }
+      const text = await res.text();
+      const parsed = parseYFResponse(text, ticker);
+      console.log(`✅ YF proxy ${i} succeeded for ${ticker}: ₹${parsed.price}`);
+      return parsed;
+    } catch(e) {
+      lastError = e;
+      console.warn(`⚠️ YF proxy ${i} failed for ${ticker}:`, e.message);
+    }
+  }
+  throw lastError || new Error('All YF proxies failed for ' + ticker);
+}
+
+/**
+ * Batch-fetch India prices. Runs concurrently with a concurrency limit
+ * to avoid overwhelming proxies, then falls back to stooq for failures.
+ */
+async function fetchIndiaPricesBatch(tickers, onUpdate, forceRefresh) {
+  if (!tickers || !tickers.length) return {};
+  const cache = indiaCache;
+  const pMap = {};
+
+  // Return cached values immediately for display while fetching
+  tickers.forEach(t => {
+    const k = t.toUpperCase();
+    if (cache[k] && !cache[k].error && !forceRefresh) pMap[k] = cache[k];
+  });
+
+  const toFetch = forceRefresh
+    ? tickers.slice()
+    : tickers.filter(t => {
+        const c = cache[t.toUpperCase()];
+        return !c || c.error || (Date.now() - c.ts > CACHE_TTL);
+      });
+
+  if (!toFetch.length) return pMap;
+
+  // Fetch with concurrency limit of 3 to be nice to free proxies
+  const CONCURRENCY = 3;
+  for (let i = 0; i < toFetch.length; i += CONCURRENCY) {
+    const chunk = toFetch.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(chunk.map(t => fetchYahooSinglePrice(t)));
+
+    results.forEach((result, idx) => {
+      const ticker = chunk[idx].toUpperCase();
+      if (result.status === 'fulfilled' && result.value && !result.value.error) {
+        pMap[ticker] = result.value;
+        cache[ticker] = result.value;
+        if (onUpdate) onUpdate(ticker, result.value);
+      } else {
+        console.warn(`YF failed for ${ticker}, will try stooq`);
+      }
+    });
+
+    // Small delay between chunks to avoid rate limiting free proxies
+    if (i + CONCURRENCY < toFetch.length) await sleep(300);
+  }
+
+  // Stooq fallback for any still missing
+  const missing = toFetch.filter(t => !pMap[t.toUpperCase()] || pMap[t.toUpperCase()].error);
+  if (missing.length) {
+    console.log('Stooq fallback for:', missing);
+    try {
+      const stooqResult = await fetchPricesBatchStooq(missing, 'india');
+      missing.forEach(t => {
+        const k = t.toUpperCase();
+        if (stooqResult[k] && !stooqResult[k].error) {
+          pMap[k] = stooqResult[k];
+          cache[k] = stooqResult[k];
+          if (onUpdate) onUpdate(k, stooqResult[k]);
+        }
+      });
+    } catch(e) {
+      console.warn('Stooq batch fallback failed:', e.message);
+      // Try stooq individually for each missing ticker
+      for (const t of missing) {
+        try {
+          const r = await fetchPricesSingleStooq(t, 'india');
+          pMap[t.toUpperCase()] = r;
+          cache[t.toUpperCase()] = r;
+          if (onUpdate) onUpdate(t.toUpperCase(), r);
+        } catch(e2) {
+          // Mark as error with stale cache if available
+          const k = t.toUpperCase();
+          if (cache[k] && cache[k].price) {
+            pMap[k] = Object.assign({}, cache[k], { stale: true });
+          } else {
+            pMap[k] = { ticker: k, price: null, change: 0, changePct: 0, name: k, error: true, ts: Date.now() };
+          }
+        }
+      }
+    }
+  }
+
+  // Ensure every requested ticker is in pMap
+  tickers.forEach(t => {
+    const k = t.toUpperCase();
+    if (!pMap[k]) {
+      pMap[k] = cache[k] || { ticker: k, price: null, change: 0, changePct: 0, name: k, error: true, ts: Date.now() };
+    }
+  });
+
+  return pMap;
+}
+
+/**
+ * Single India stock price — uses Yahoo first, stooq fallback
  */
 async function fetchSingleIndiaPrice(ticker) {
   const key = ticker.toUpperCase();
   const cache = indiaCache;
   if (cache[key] && !cache[key].error && (Date.now() - cache[key].ts < CACHE_TTL)) return cache[key];
 
-  // Try proxy batch with single ticker
   try {
-    const batch = await fetchIndiaPricesViaProxy([key]);
-    if (batch[key] && !batch[key].error && batch[key].price) {
-      cache[key] = batch[key];
-      return batch[key];
-    }
+    const result = await fetchYahooSinglePrice(ticker);
+    cache[key] = result;
+    return result;
   } catch(e) {}
 
-  // Fallback: stooq .in
+  // Stooq fallback
   try {
     const r = await fetchPricesSingleStooq(ticker, 'india');
     cache[key] = r;
@@ -799,72 +922,59 @@ async function fetchSingleIndiaPrice(ticker) {
   return { ticker: key, price: null, change: 0, changePct: 0, name: key, error: true, ts: Date.now() };
 }
 
-/**
- * Batch India prices — split into chunks of 5 to avoid overloading proxy
- */
-async function fetchIndiaPricesBatch(tickers, onUpdate, forceRefresh) {
-  if (!tickers || !tickers.length) return {};
-  const cache = indiaCache;
-
-  const toFetch = forceRefresh ? tickers.slice() : tickers.filter(function(t) {
-    const c = cache[t.toUpperCase()];
-    return !c || c.error || (Date.now() - c.ts > CACHE_TTL);
-  });
-
-  const pMap = {};
-
-  // Return cached values for tickers that don't need refreshing
-  tickers.forEach(function(t) {
-    if (cache[t.toUpperCase()] && !cache[t.toUpperCase()].error) {
-      pMap[t.toUpperCase()] = cache[t.toUpperCase()];
-    }
-  });
-
-  if (toFetch.length === 0) return pMap;
-
-  // Chunk into groups of 5 (AI can reliably fetch 5 at once)
-  const CHUNK = 5;
-  for (let i = 0; i < toFetch.length; i += CHUNK) {
-    const chunk = toFetch.slice(i, i + CHUNK);
-    try {
-      const result = await fetchIndiaPricesViaProxy(chunk);
-      Object.assign(pMap, result);
-      Object.assign(cache, result);
-      if (onUpdate) {
-        Object.values(result).forEach(function(r) {
-          if (!r.error) onUpdate(r.ticker, r);
-        });
-      }
-    } catch(e) {
-      console.warn('Chunk fetch failed:', e.message);
-    }
-
-    // Fallback stooq for any still missing from this chunk
-    const missing = chunk.filter(function(t) {
-      return !pMap[t.toUpperCase()] || pMap[t.toUpperCase()].error;
-    });
-    if (missing.length) {
-      const stooqResult = await fetchPricesBatchStooq(missing, 'india');
-      Object.assign(pMap, stooqResult);
-      Object.assign(cache, stooqResult);
-      if (onUpdate) {
-        Object.values(stooqResult).forEach(function(r) {
-          if (!r.error) onUpdate(r.ticker, r);
-        });
+// ==========================================
+// FX RATE — frankfurter.app (free, no key, no limits)
+// Fallback: exchangerate-api open endpoint
+// ==========================================
+async function fetchFxRate() {
+  // Try frankfurter.app (ECB rates, completely free)
+  try {
+    const res = await fetchWithTimeout('https://api.frankfurter.app/latest?from=USD&to=INR', 8000);
+    if (res.ok) {
+      const data = await res.json();
+      const rate = data?.rates?.INR;
+      if (rate && rate > 0) {
+        fxRateINR = rate;
+        usdPerInr = 1 / fxRateINR;
+        updateFxDisplays();
+        console.log('✅ FX from frankfurter:', fxRateINR);
+        return;
       }
     }
+  } catch(e) { console.warn('frankfurter FX failed:', e.message); }
+
+  // Fallback: open.er-api.com (free tier, generous limits)
+  try {
+    const res = await fetchWithTimeout('https://open.er-api.com/v6/latest/USD', 8000);
+    if (res.ok) {
+      const data = await res.json();
+      const rate = data?.rates?.INR;
+      if (rate && rate > 0) {
+        fxRateINR = rate;
+        usdPerInr = 1 / fxRateINR;
+        updateFxDisplays();
+        console.log('✅ FX from open.er-api:', fxRateINR);
+        return;
+      }
+    }
+  } catch(e) { console.warn('open.er-api FX failed:', e.message); }
+
+  // Final fallback: use last known or sensible default
+  if (!fxRateINR) {
+    fxRateINR = 83.5;
+    usdPerInr = 1 / fxRateINR;
+    console.warn('⚠️ Using fallback FX rate:', fxRateINR);
   }
-
-  // Ensure all requested tickers are in pMap
-  tickers.forEach(function(t) {
-    const k = t.toUpperCase();
-    if (!pMap[k]) {
-      pMap[k] = cache[k] || { ticker: k, price: null, change: 0, changePct: 0, name: k, error: true, ts: Date.now() };
-    }
-  });
-
-  return pMap;
+  updateFxDisplays();
 }
+
+function updateFxDisplays() {
+  const rate = fxRateINR ? fxRateINR.toFixed(2) : '83.50';
+  document.querySelectorAll('#india-fx-rate,#nw-fx-rate').forEach(el => el.textContent = rate);
+}
+function inrToUsd(inr) { return inr * usdPerInr; }
+function usdToInr(usd) { return usd * (fxRateINR || 83.5); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ==========================================
 // NSE SYMBOL LOOKUP — AI-powered
@@ -910,7 +1020,7 @@ async function lookupNSESymbol() {
 }
 
 function selectNSESymbol(symbol) {
-  closeSheet('add');  // close any open sheet first
+  closeSheet('add');
   openAddSheet('india');
   setTimeout(function() {
     const ticker = document.getElementById('add-ticker');
@@ -961,7 +1071,9 @@ async function fetchPricesBatchStooq(tickers, market) {
   market = market || 'us';
   const mapFn = market === 'india' ? toStooqIN : toStooqUS;
   const symbols = tickers.map(mapFn).join(',');
-  const res = await fetchWithTimeout('https://stooq.com/q/l/?s=' + symbols + '&f=sd2t2ohlcv&h&e=csv', 12000);
+  // Route through CORS proxy since stooq.com doesn't send CORS headers (blocks GitHub Pages)
+  const stooqUrl = 'https://stooq.com/q/l/?s=' + symbols + '&f=sd2t2ohlcv&h&e=csv';
+  const res = await fetchWithTimeout('https://corsproxy.io/?url=' + encodeURIComponent(stooqUrl), 12000);
   if (!res.ok) throw new Error('stooq ' + res.status);
   const csv = await res.text();
   const lines = csv.trim().split('\n');
@@ -987,7 +1099,8 @@ async function fetchPricesBatchStooq(tickers, market) {
 async function fetchPricesSingleStooq(ticker, market) {
   market = market || 'us';
   const sym = market === 'india' ? toStooqIN(ticker) : toStooqUS(ticker);
-  const res = await fetchWithTimeout('https://stooq.com/q/l/?s=' + sym + '&f=sd2t2ohlcv&h&e=csv', 10000);
+  const stooqUrl = 'https://stooq.com/q/l/?s=' + sym + '&f=sd2t2ohlcv&h&e=csv';
+  const res = await fetchWithTimeout('https://corsproxy.io/?url=' + encodeURIComponent(stooqUrl), 10000);
   if (!res.ok) throw new Error('stooq ' + res.status);
   const csv = await res.text();
   const lines = csv.trim().split('\n');
@@ -1005,7 +1118,7 @@ async function fetchPricesBatch(tickers, market, onUpdate, forceRefresh) {
   market = market || 'us';
   if (!tickers || !tickers.length) return {};
 
-  // Route India to dedicated engine
+  // Route India to Yahoo Finance engine
   if (market === 'india') return fetchIndiaPricesBatch(tickers, onUpdate, forceRefresh);
 
   const cache = stockCache;
@@ -1046,30 +1159,6 @@ async function fetchSinglePrice(ticker, market, force) {
   if (cache[key] && cache[key].price) return Object.assign({}, cache[key], { stale: true });
   return { ticker: key, price: null, change: 0, changePct: 0, name: key, error: true, ts: Date.now() };
 }
-
-// ==========================================
-// FX RATE
-// ==========================================
-async function fetchFxRate() {
-  try {
-    const res = await fetchWithTimeout('https://stooq.com/q/l/?s=inrusd&f=sd2t2ohlcv&h&e=csv', 8000);
-    const csv = await res.text();
-    const lines = csv.trim().split('\n');
-    if (lines.length >= 2) {
-      const parts = lines[lines.length - 1].split(',');
-      const close = parseFloat(parts[6]) || parseFloat(parts[5]);
-      if (close && close > 0) { usdPerInr = close; fxRateINR = 1 / close; updateFxDisplays(); return; }
-    }
-  } catch(e) {}
-  usdPerInr = 1 / 83.5; fxRateINR = 83.5; updateFxDisplays();
-}
-
-function updateFxDisplays() {
-  const rate = fxRateINR ? fxRateINR.toFixed(2) : '83.50';
-  document.querySelectorAll('#india-fx-rate,#nw-fx-rate').forEach(el => el.textContent = rate);
-}
-function inrToUsd(inr) { return inr * usdPerInr; }
-function usdToInr(usd) { return usd * (fxRateINR || 83.5); }
 
 // ==========================================
 // AUTH
@@ -1182,6 +1271,9 @@ function switchMarket(market) {
   document.getElementById('us-view').style.display       = market==='us'       ? 'block' : 'none';
   document.getElementById('india-view').style.display    = market==='india'    ? 'block' : 'none';
   document.getElementById('combined-view').style.display = market==='combined' ? 'block' : 'none';
+  // Show india price info bar when viewing india
+  const infoBar = document.getElementById('india-price-info');
+  if (infoBar) infoBar.style.display = market==='india' && indiaHoldings.length ? 'flex' : 'none';
   renderPortfolioForMarket(market);
 }
 function renderPortfolioForMarket(market, force) {
@@ -1235,7 +1327,7 @@ async function addHolding() {
 
   const btn = document.getElementById('add-submit-btn');
   const vr  = document.getElementById('add-verify-result');
-  btn.textContent = market==='india' ? '🔍 Verifying on NSE...' : '🔍 Verifying ticker...';
+  btn.textContent = market==='india' ? '🔍 Verifying on NSE (Yahoo Finance)...' : '🔍 Verifying ticker...';
   btn.disabled = true;
   if (vr) { vr.style.display='none'; }
 
@@ -1251,7 +1343,7 @@ async function addHolding() {
       vr.style.borderColor='rgba(255,77,109,.2)';
       vr.style.color='var(--red)';
       vr.innerHTML = market==='india'
-        ? '❌ Could not fetch NSE price for <b>' + ticker + '</b>. Try the Symbol Lookup tool below, or check if the symbol is correct. Common examples: RELIANCE, TCS, HDFCBANK, INFY, WIPRO'
+        ? '❌ Could not fetch NSE price for <b>' + ticker + '</b>. Check the symbol is correct — common examples: RELIANCE, TCS, HDFCBANK, INFY, WIPRO. You can use the Symbol Lookup tool below.'
         : '❌ Ticker not found. Check the symbol and your internet connection.';
     }
     btn.textContent = 'Add to Portfolio'; btn.disabled=false;
@@ -1259,12 +1351,13 @@ async function addHolding() {
   }
 
   const ccy = market==='india' ? '₹' : '$';
+  const srcLabel = stock.source === 'yahoo' ? ' <span class="yf-badge">Yahoo Finance</span>' : '';
   if (vr) {
     vr.style.display='block';
     vr.style.background='rgba(0,229,160,.08)';
     vr.style.borderColor='rgba(0,229,160,.2)';
     vr.style.color='var(--green)';
-    vr.innerHTML = '✅ Found <b>' + (stock.name||ticker) + '</b> — ' + ccy + stock.price.toFixed(2) + ' (' + (stock.changePct>=0?'+':'') + stock.changePct.toFixed(2) + '% today)';
+    vr.innerHTML = '✅ Found <b>' + (stock.name||ticker) + '</b>'+srcLabel+' — ' + ccy + stock.price.toFixed(2) + ' (' + (stock.changePct>=0?'+':'') + stock.changePct.toFixed(2) + '% today)';
   }
 
   btn.textContent = '💾 Saving...';
@@ -1340,21 +1433,29 @@ async function renderUSPortfolio(forceRefresh) {
 // ==========================================
 async function renderIndiaPortfolio(forceRefresh) {
   if (!fxRateINR) await fetchFxRate();
+
+  // Show info bar
+  const infoBar = document.getElementById('india-price-info');
+  if (infoBar && indiaHoldings.length) infoBar.style.display = 'flex';
+
   const container = document.getElementById('india-holdings-list');
   if (!indiaHoldings.length) {
     container.innerHTML='<div class="empty-state"><div class="icon">📈</div><p>No Indian stocks yet.<br>Tap + Add or use Symbol Lookup below.</p></div>';
     updatePortfolioSummary('india', 0, 0, 0, false);
+    if (infoBar) infoBar.style.display = 'none';
     return;
   }
+
   const hasCache = indiaHoldings.some(h => indiaCache[h.ticker] && !indiaCache[h.ticker].error);
   if (!hasCache) {
     container.innerHTML = indiaHoldings.map(()=>'<div class="skeleton" style="height:78px;margin-bottom:10px;border-radius:16px"></div>').join('');
-    showPriceStatusBar('india','fetching','Fetching '+indiaHoldings.length+' NSE prices via Yahoo Finance...');
+    showPriceStatusBar('india','fetching','Fetching '+indiaHoldings.length+' NSE prices (Yahoo Finance)...');
   } else {
     renderHoldingCards(container, indiaHoldings, indiaCache, 'india');
     updatePortfolioSummaryFromCache('india');
     if (forceRefresh) showPriceStatusBar('india','fetching','Refreshing NSE prices...');
   }
+
   let fetched=0, errors=0;
   await fetchPricesBatch(indiaHoldings.map(h=>h.ticker), 'india', function(ticker, result) {
     fetched++; if (result.error) errors++;
@@ -1363,12 +1464,22 @@ async function renderIndiaPortfolio(forceRefresh) {
     if (el) { const idx=indiaHoldings.findIndex(x=>x.ticker===ticker); if(idx>-1){ const nc=buildCard(indiaHoldings[idx],result,COLORS[idx%COLORS.length],'india'); el.replaceWith(nc); } }
     updatePortfolioSummaryFromCache('india');
   }, forceRefresh);
+
   renderHoldingCards(container, indiaHoldings, indiaCache, 'india');
   updatePortfolioSummaryFromCache('india');
   document.getElementById('india-last-updated').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+
+  const successCount = indiaHoldings.filter(h => indiaCache[h.ticker] && !indiaCache[h.ticker].error && indiaCache[h.ticker].price).length;
+  const infoEl = document.getElementById('india-price-info-text');
+  if (infoEl) {
+    const sources = [...new Set(indiaHoldings.map(h => indiaCache[h.ticker]?.source).filter(Boolean))];
+    const srcText = sources.includes('yahoo') ? 'Yahoo Finance (NSE)' : sources.includes('stooq') ? 'Stooq' : 'NSE';
+    infoEl.textContent = `📡 ${successCount}/${indiaHoldings.length} prices via ${srcText} · Unlimited refreshes`;
+  }
+
   if (errors===0) showPriceStatusBar('india','success','All '+indiaHoldings.length+' NSE prices updated ✓');
-  else if (errors < indiaHoldings.length) showPriceStatusBar('india','partial',(indiaHoldings.length-errors)+'/'+indiaHoldings.length+' loaded');
-  else showPriceStatusBar('india','error','NSE prices unavailable — tap ↺ Retry');
+  else if (errors < indiaHoldings.length) showPriceStatusBar('india','partial',successCount+'/'+indiaHoldings.length+' prices loaded');
+  else showPriceStatusBar('india','error','Could not fetch NSE prices — tap ↺ Retry');
   if (currentMarket==='combined') renderCombinedNetWorth();
 }
 
@@ -1448,15 +1559,15 @@ function buildCard(h, p, color, market) {
     priceHTML='<div class="holding-value" style="color:var(--muted);font-size:12px">Price unavailable</div>';
     changeHTML='<div class="holding-change loading">⚠ No data</div>';
   } else if (p&&p.price) {
-    priceHTML='<div class="holding-value">'+ccy+p.price.toLocaleString(isIndia?'en-IN':'en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>';
+    const staleTag = p.stale ? ' <span style="font-size:9px;opacity:.5">(cached)</span>' : '';
+    priceHTML='<div class="holding-value">'+ccy+p.price.toLocaleString(isIndia?'en-IN':'en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+staleTag+'</div>';
     changeHTML='<div class="holding-change '+(p.changePct>=0?'pos':'neg')+'">'+(p.changePct>=0?'▲':'▼')+' '+Math.abs(p.changePct).toFixed(2)+'%</div>';
   } else {
     priceHTML='<div class="holding-value" style="color:var(--muted)">Loading...</div>';
     changeHTML='<div class="holding-change loading">—</div>';
   }
   const badge = isIndia ? '<span class="exchange-badge nse">NSE</span>' : '<span class="exchange-badge us">US</span>';
-  const sourceTag = (p&&p.source==='yahoo-proxy') ? '<span class="source-pill">YF</span>' : '';
-  div.innerHTML = '<div class="holding-icon" style="color:'+color+'">'+h.ticker.substring(0,2)+'</div><div class="holding-info"><div class="holding-ticker">'+h.ticker+badge+sourceTag+'</div><div class="holding-name">'+h.shares+' shares · avg '+ccy+h.cost.toLocaleString(isIndia?'en-IN':'en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div></div><div class="holding-right">'+priceHTML+changeHTML+'</div>';
+  div.innerHTML = '<div class="holding-icon" style="color:'+color+'">'+h.ticker.substring(0,2)+'</div><div class="holding-info"><div class="holding-ticker">'+h.ticker+badge+'</div><div class="holding-name">'+h.shares+' shares · avg '+ccy+h.cost.toLocaleString(isIndia?'en-IN':'en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div></div><div class="holding-right">'+priceHTML+changeHTML+'</div>';
   div.onclick = function() {
     const pd=cache[h.ticker]||{};
     const v=pd.price?pd.price*h.shares:h.cost*h.shares;
@@ -1523,7 +1634,13 @@ async function removeHolding(ticker, market) {
   renderPortfolioForMarket(market); if(currentMarket==='combined') renderCombinedNetWorth();
 }
 
-function forceRefreshPrices() { stockCache={}; indiaCache={}; showToast('🔄 Refreshing all prices...'); renderUSPortfolio(true); renderIndiaPortfolio(true); }
+function forceRefreshPrices(market) {
+  if (market === 'india' || !market) { indiaCache = {}; }
+  if (market === 'us' || !market) { stockCache = {}; }
+  showToast('🔄 Refreshing prices...');
+  if (!market || market === 'us') renderUSPortfolio(true);
+  if (!market || market === 'india') renderIndiaPortfolio(true);
+}
 
 // ==========================================
 // AI SUGGESTIONS
@@ -1651,20 +1768,37 @@ async function loadMarkets() {
 }
 
 async function loadIndiaMarkets() {
-  // Fetch index data via AI proxy (Yahoo Finance)
-  const indiaIdx=[{sym:'NIFTY 50',yf:'^NSEI'},{sym:'SENSEX',yf:'^BSESN'},{sym:'NIFTY Bank',yf:'^NSEBANK'},{sym:'NIFTY IT',yf:'NIFTYIT.NS'}];
-  const cont=document.getElementById('india-market-indices');
-  cont.innerHTML=indiaIdx.map(()=>'<div class="skeleton" style="height:80px;border-radius:14px"></div>').join('');
-  try {
-    const res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:'Fetch current values for these Indian market indices: NIFTY 50, BSE SENSEX, NIFTY Bank Index, NIFTY IT Index.\n\nReturn ONLY JSON:\n{"indices":[{"name":"NIFTY 50","value":24500.5,"changePct":0.35},{"name":"SENSEX","value":80500.0,"changePct":0.28},{"name":"NIFTY Bank","value":52000.0,"changePct":-0.15},{"name":"NIFTY IT","value":38000.0,"changePct":0.55}]}'}]})});
-    const data=await res.json();
-    const text=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
-    const js=text.indexOf('{'),je=text.lastIndexOf('}');
-    const parsed=JSON.parse(text.substring(js,je+1));
-    cont.innerHTML=(parsed.indices||[]).map(idx=>{ const chg=idx.changePct||0; return '<div class="market-card india-index"><div class="market-name">'+idx.name+'</div><div class="market-value">'+(idx.value?idx.value.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</div><div class="market-change" style="color:'+(chg>=0?'var(--green)':'var(--red)')+'">'+( chg>=0?'▲':'▼')+' '+Math.abs(chg).toFixed(2)+'%</div></div>'; }).join('');
-  } catch(e) {
-    cont.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;grid-column:span 2">Could not load India indices</div>';
-  }
+  // Fetch NSE index ETF proxies via Yahoo Finance (no API key needed)
+  // ^NSEI = NIFTY 50, ^BSESN = SENSEX, ^NSEBANK = NIFTY Bank
+  const indices = [
+    { sym: '^NSEI',    label: 'NIFTY 50' },
+    { sym: '^BSESN',   label: 'SENSEX' },
+    { sym: '^NSEBANK', label: 'NIFTY Bank' },
+    { sym: '^CNXIT',   label: 'NIFTY IT' },
+  ];
+  const cont = document.getElementById('india-market-indices');
+  cont.innerHTML = indices.map(() => '<div class="skeleton" style="height:80px;border-radius:14px"></div>').join('');
+
+  const results = await Promise.allSettled(indices.map(idx => fetchYahooSinglePrice(idx.sym)));
+
+  cont.innerHTML = indices.map((idx, i) => {
+    const r = results[i];
+    if (r.status === 'fulfilled' && r.value && !r.value.error) {
+      const p = r.value;
+      const chg = p.changePct || 0;
+      return `<div class="market-card india-index">
+        <div class="market-name">${idx.label}</div>
+        <div class="market-value">${p.price.toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div class="market-change" style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)}%</div>
+      </div>`;
+    }
+    return `<div class="market-card india-index">
+      <div class="market-name">${idx.label}</div>
+      <div class="market-value" style="color:var(--muted)">—</div>
+      <div class="market-change" style="color:var(--muted)">No data</div>
+    </div>`;
+  }).join('');
+
   renderWatchlist('india');
 }
 
