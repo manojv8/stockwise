@@ -927,37 +927,39 @@ async function fetchYahooSinglePrice(ticker) {
 }
 
 // ==========================================
-// DIVIDEND ENGINE — Yahoo Finance quoteSummary
-// Free, no API key. Returns trailing annual dividend rate per share.
-// Works for US stocks (AAPL, MSFT...) and Indian stocks (RELIANCE.NS, TCS.NS)
+// DIVIDEND ENGINE — Yahoo Finance chart endpoint with events=div
+// The quoteSummary endpoint requires crumbs/cookies (fails in browser).
+// SOLUTION: use the same chart API as prices, but ask for dividend events.
+// We sum all dividends paid in the last 365 days = trailing annual rate.
 // ==========================================
 
 /**
- * Build Yahoo Finance quoteSummary URL variants for dividend data.
- * modules=summaryDetail gives us trailingAnnualDividendRate + dividendYield
+ * Build Yahoo Finance chart URLs with dividend events for a ticker.
+ * The events=div parameter returns dividend history within the range.
+ * Uses 1y range to capture trailing twelve-month dividends.
  */
 function getYFDividendProxies(ticker, market) {
   const t = ticker.toUpperCase();
   const suffixes = market === 'india' ? ['.NS', '.BO'] : [''];
-  const urls = [];
+  const fetchers = [];
   for (const sfx of suffixes) {
     const sym = t + sfx;
-    urls.push(`https://query1.finance.yahoo.com/v10/finance/quoteSummary/${sym}?modules=summaryDetail`);
-    urls.push(`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${sym}?modules=summaryDetail`);
-  }
-  const fetchers = [];
-  for (const url of urls) {
-    fetchers.push(() => fetchWithTimeout(`https://corsproxy.io/?url=${encodeURIComponent(url)}`, 10000));
-    fetchers.push(() => fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, 10000));
+    // 1y range, daily interval, events=div → returns dividend events in the period
+    const url1 = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1y&events=div`;
+    const url2 = `https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1y&events=div`;
+    fetchers.push(() => fetchWithTimeout(`https://corsproxy.io/?url=${encodeURIComponent(url1)}`, 12000));
+    fetchers.push(() => fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(url1)}`, 12000));
+    fetchers.push(() => fetchWithTimeout(`https://corsproxy.io/?url=${encodeURIComponent(url2)}`, 10000));
   }
   return fetchers;
 }
 
 /**
- * Parse Yahoo quoteSummary response for dividend info.
- * Returns: { annualRate: number, yield: number (as decimal, e.g. 0.025 = 2.5%) }
+ * Parse Yahoo chart response to extract trailing 12-month dividend total.
+ * Dividend events are under result.events.dividends as { timestamp: { amount, date } }.
+ * Sums all dividends paid in the last 365 days.
  */
-function parseYFDividendResponse(text) {
+function parseYFDividendResponse(text, ticker) {
   let json;
   if (text.trimStart().startsWith('{') && text.includes('"contents"')) {
     try {
@@ -967,25 +969,46 @@ function parseYFDividendResponse(text) {
   } else {
     json = JSON.parse(text);
   }
-  const summary = json?.quoteSummary?.result?.[0]?.summaryDetail;
-  if (!summary) throw new Error('No summaryDetail');
 
-  const annualRate = summary.trailingAnnualDividendRate?.raw
-                  ?? summary.dividendRate?.raw
-                  ?? 0;
-  const yieldVal = summary.trailingAnnualDividendYield?.raw
-                ?? summary.dividendYield?.raw
-                ?? 0;
+  const result = json?.chart?.result?.[0];
+  if (!result) throw new Error('No chart result');
+
+  const meta = result.meta;
+  const currentPrice = meta?.regularMarketPrice || meta?.chartPreviousClose || 0;
+
+  // Dividends are in result.events.dividends — keyed by timestamp
+  const divs = result?.events?.dividends;
+  if (!divs) {
+    // Not an error — stock just doesn't pay dividends
+    return { annualRate: 0, yield: 0, hasData: true };
+  }
+
+  // Sum dividend amounts from last 365 days
+  const oneYearAgo = Math.floor((Date.now() - 365 * 86400 * 1000) / 1000);
+  let annualRate = 0;
+  let paymentCount = 0;
+  for (const key of Object.keys(divs)) {
+    const evt = divs[key];
+    const ts = evt.date || parseInt(key, 10);
+    if (ts >= oneYearAgo && evt.amount > 0) {
+      annualRate += evt.amount;
+      paymentCount++;
+    }
+  }
+
+  const yieldVal = currentPrice > 0 ? annualRate / currentPrice : 0;
 
   return {
-    annualRate: +annualRate || 0,
-    yield: +yieldVal || 0, // decimal form (0.025 = 2.5%)
+    annualRate: +annualRate.toFixed(4),
+    yield: +yieldVal.toFixed(6),
+    paymentCount,
+    hasData: true,
   };
 }
 
 /**
- * Fetch dividend data for a single ticker (both markets).
- * Returns { annualRate, yield, ts } or { annualRate: 0, yield: 0, ts } on failure.
+ * Fetch dividend data for a single ticker.
+ * Tries .NS then .BO for Indian stocks. Returns { annualRate, yield, ts }.
  */
 async function fetchDividendData(ticker, market) {
   const key = ticker.toUpperCase() + ':' + market;
@@ -998,23 +1021,39 @@ async function fetchDividendData(ticker, market) {
       const res = await proxies[i]();
       if (!res.ok) continue;
       const text = await res.text();
-      const parsed = parseYFDividendResponse(text);
-      const result = { annualRate: parsed.annualRate, yield: parsed.yield, ts: Date.now() };
-      dividendCache[key] = result;
-      return result;
-    } catch(e) { /* try next */ }
+      const parsed = parseYFDividendResponse(text, ticker);
+      // Always cache — even zero-dividend results (they're correct answers)
+      const result = {
+        annualRate: parsed.annualRate,
+        yield: parsed.yield,
+        paymentCount: parsed.paymentCount || 0,
+        ts: Date.now(),
+      };
+      // Only cache if we got a valid response; if annualRate > 0, we're done
+      // If annualRate is 0, try next proxy (in case this one had stale data)
+      if (parsed.annualRate > 0) {
+        dividendCache[key] = result;
+        console.log(`✅ Dividend for ${ticker} (${market}): ${parsed.annualRate}/yr (${parsed.paymentCount} payments)`);
+        return result;
+      }
+      // Keep trying other proxies for a non-zero result
+      if (i === proxies.length - 1) {
+        // Last proxy also returned zero — genuinely no dividend
+        dividendCache[key] = result;
+        console.log(`ℹ️ ${ticker} (${market}): no dividends in last 12 months`);
+        return result;
+      }
+    } catch(e) { /* try next proxy */ }
   }
 
-  // No dividend data — cache zero to avoid retrying
-  const zero = { annualRate: 0, yield: 0, ts: Date.now() };
+  // All proxies failed — cache a zero result briefly to avoid hammering
+  const zero = { annualRate: 0, yield: 0, paymentCount: 0, ts: Date.now() };
   dividendCache[key] = zero;
   return zero;
 }
 
 /**
  * Batch fetch dividends with concurrency limit.
- * @param {Array<{ticker, market}>} items
- * @returns {Object} map of "TICKER:market" → { annualRate, yield }
  */
 async function fetchDividendsBatch(items, onUpdate) {
   if (!items || !items.length) return {};
@@ -1039,7 +1078,6 @@ async function fetchDividendsBatch(items, onUpdate) {
 /**
  * Calculate dividend projections for a portfolio.
  * Returns: { annual, quarterly, monthly, perHolding: [...], avgYield }
- * All values in the given currency ($ for US, ₹ for India).
  */
 function calculateDividendProjections(holdings, market) {
   let totalAnnual = 0;
@@ -1063,8 +1101,9 @@ function calculateDividendProjections(holdings, market) {
         annual: holdingAnnual,
         quarterly: holdingAnnual / 4,
         monthly: holdingAnnual / 12,
-        yield: div.yield * 100, // as percentage
+        yield: div.yield * 100,
         ratePerShare: div.annualRate,
+        paymentCount: div.paymentCount || 0,
       });
     }
   }
