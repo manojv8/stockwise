@@ -812,7 +812,7 @@ let fxRateINR = null, usdPerInr = 1/83.5;
 let allSuggestions = [], currentFilter = 'all';
 let currentMarket = 'us', currentNewsTab = 'all', currentMarketsTab = 'us';
 let portfolioChart = null, currentChartRange = '1W', dashPriceMap = {};
-let chatHistory = [], screenshotBase64 = null, detectedStocks = [];
+let chatHistory = [], screenshotBase64 = null, screenshotMediaType = 'image/jpeg', detectedStocks = [];
 let watchlistTarget = 'us', refreshInterval = null;
 const CACHE_TTL = 5 * 60 * 1000;
 const COLORS = ['#5b8fff','#a78bfa','#00e5a0','#f5c842','#ff4d6d','#38bdf8','#fb7185','#34d399','#FF9933','#e879f9'];
@@ -2519,30 +2519,139 @@ function renderPerfTable(sorted) {
 // ==========================================
 function openScreenshotSheet(){document.getElementById('screenshot-overlay').classList.add('open');document.getElementById('screenshot-sheet').classList.add('open');}
 function resetScreenshotSheet(){screenshotBase64=null;detectedStocks=[];['screenshot-step-1'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='block';});['screenshot-step-2','screenshot-loading','screenshot-preview'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});const ab=document.getElementById('screenshot-analyze-btn');if(ab)ab.style.display='none';const fi=document.getElementById('screenshot-file-input');if(fi)fi.value='';}
-function handleScreenshotUpload(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){const dataUrl=e.target.result;screenshotBase64=dataUrl.split(',')[1];document.getElementById('screenshot-img').src=dataUrl;document.getElementById('screenshot-preview').style.display='block';document.getElementById('screenshot-analyze-btn').style.display='block';document.getElementById('screenshot-drop-area').style.borderColor='rgba(0,229,160,.6)';};reader.readAsDataURL(file);}
-
-async function analyzeScreenshot(){
-  if(!screenshotBase64){showToast('Please upload a screenshot first');return;}
-  document.getElementById('screenshot-step-1').style.display='none';
-  document.getElementById('screenshot-loading').style.display='block';
-  try {
-    const res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1200,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:screenshotBase64}},{type:'text',text:'Extract ALL stock positions from this portfolio screenshot. This may be US (Robinhood) or Indian broker (Zerodha, Groww, Upstox, Angel One, Kite).\n\nFor Indian brokers: extract NSE symbols WITHOUT .NS suffix.\nReturn ONLY JSON:\n{"stocks":[{"ticker":"AAPL","shares":10.5,"avgCost":150.00,"market":"us"},{"ticker":"RELIANCE","shares":5,"avgCost":2500.00,"market":"india"}]}\nReturn ONLY JSON, no other text.'}]}]})});
-    const data=await res.json();
-    const text=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
-    const js=text.indexOf('{'),je=text.lastIndexOf('}'); if(js===-1)throw new Error('No JSON');
-    const parsed=JSON.parse(text.substring(js,je+1));
-    if(!parsed.stocks||!parsed.stocks.length)throw new Error('No stocks');
-    detectedStocks=parsed.stocks.filter(s=>s.ticker&&s.shares>0);
-    if(!detectedStocks.length)throw new Error('No valid stocks');
-    document.getElementById('screenshot-loading').style.display='none';
-    document.getElementById('screenshot-step-2').style.display='block';
-    renderDetectedStocks();
-  } catch(e){
-    document.getElementById('screenshot-loading').style.display='none';
-    document.getElementById('screenshot-step-1').style.display='block';
-    showToast('❌ Could not read screenshot. Try a clearer image.');
-  }
+function handleScreenshotUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    // Parse "data:image/png;base64,xxxx" — extract real MIME type
+    const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+    if (!match) { showToast('❌ Could not read file'); return; }
+    const detectedMt = match[1].toLowerCase();
+    const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    screenshotMediaType = validTypes.includes(detectedMt) ? detectedMt : 'image/png';
+    screenshotBase64 = match[2];
+    console.log('📸 Loaded:', screenshotMediaType, '~' + Math.round(screenshotBase64.length * 0.75 / 1024) + 'KB');
+    document.getElementById('screenshot-img').src = dataUrl;
+    document.getElementById('screenshot-preview').style.display = 'block';
+    document.getElementById('screenshot-analyze-btn').style.display = 'block';
+    document.getElementById('screenshot-drop-area').style.borderColor = 'rgba(0,229,160,.6)';
+  };
+  reader.onerror = function() { showToast('❌ Could not read file'); };
+  reader.readAsDataURL(file);
 }
+
+async function analyzeScreenshot() {
+  if (!screenshotBase64) { showToast('Please upload a screenshot first'); return; }
+  document.getElementById('screenshot-step-1').style.display = 'none';
+  document.getElementById('screenshot-loading').style.display = 'block';
+
+  const promptText =
+    'You are extracting stock holdings from a brokerage app screenshot. ' +
+    'It may be a US broker (Robinhood, Fidelity, Webull, Schwab, E*TRADE) ' +
+    'or an Indian broker (Zerodha Kite, Groww, Upstox, Angel One, ICICI Direct).\n\n' +
+    'EXTRACT EVERY visible position with:\n' +
+    '- ticker (NSE symbols WITHOUT .NS suffix, e.g. RELIANCE not RELIANCE.NS)\n' +
+    '- shares (qty / units held, preserve decimals)\n' +
+    '- avgCost (average buy price). If not visible, use current price.\n' +
+    '- market: "us" or "india" (infer from ₹ vs $ or broker brand)\n\n' +
+    'Return ONLY valid JSON. No markdown, no code fences, no preamble:\n\n' +
+    '{"stocks":[{"ticker":"AAPL","shares":10.5,"avgCost":150.00,"market":"us"},' +
+    '{"ticker":"RELIANCE","shares":5,"avgCost":2500.00,"market":"india"}]}';
+
+  const attempts = [
+    { model: 'claude-haiku-4-5-20251001', max_tokens: 2000 },
+    { model: 'claude-sonnet-4-5-20250929', max_tokens: 2000 },
+  ];
+  let lastError = null;
+
+  for (let i = 0; i < attempts.length; i++) {
+    const { model, max_tokens } = attempts[i];
+    try {
+      console.log(`📸 Trying ${model} (attempt ${i+1})`);
+      const res = await fetch(PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
+        body: JSON.stringify({
+          model, max_tokens,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: screenshotMediaType, data: screenshotBase64 } },
+              { type: 'text', text: promptText }
+            ]
+          }]
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Proxy ${res.status}: ${errText.substring(0, 200)}`);
+      }
+
+      const data = await res.json();
+      if (data.error) throw new Error(`API: ${data.error.message || JSON.stringify(data.error)}`);
+
+      const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+      if (!text) throw new Error('Empty response');
+
+      console.log('📸 Response (first 300 chars):', text.substring(0, 300));
+
+      // Strip markdown fences if Claude wrapped the JSON
+      let cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+      const js = cleaned.indexOf('{'), je = cleaned.lastIndexOf('}');
+      if (js === -1 || je <= js) throw new Error('No JSON: ' + cleaned.substring(0, 150));
+
+      const parsed = JSON.parse(cleaned.substring(js, je + 1));
+      if (!parsed.stocks || !Array.isArray(parsed.stocks) || !parsed.stocks.length) {
+        throw new Error('No stocks array');
+      }
+
+      detectedStocks = parsed.stocks
+        .filter(s => s && s.ticker && typeof s.ticker === 'string')
+        .map(s => ({
+          ticker: String(s.ticker).toUpperCase().trim().replace(/\.(NS|BO)$/, ''),
+          shares: parseFloat(s.shares) || 0,
+          avgCost: parseFloat(s.avgCost) || 0,
+          market: (s.market === 'india' || s.market === 'IN') ? 'india' : 'us'
+        }))
+        .filter(s => s.ticker && s.shares > 0);
+
+      if (!detectedStocks.length) throw new Error('No valid stocks after filtering');
+
+      console.log(`✅ Detected ${detectedStocks.length} holdings`);
+      document.getElementById('screenshot-loading').style.display = 'none';
+      document.getElementById('screenshot-step-2').style.display = 'block';
+      renderDetectedStocks();
+      return;
+    } catch (e) {
+      lastError = e;
+      console.error(`❌ Attempt ${i+1} failed:`, e.message);
+    }
+  }
+
+  // All attempts failed — show diagnostic toast
+  document.getElementById('screenshot-loading').style.display = 'none';
+  document.getElementById('screenshot-step-1').style.display = 'block';
+  const errMsg = lastError ? lastError.message : 'Unknown error';
+  console.error('❌ All attempts failed:', errMsg);
+
+  let userMsg = '❌ ';
+  if (errMsg.includes('Proxy 4') || errMsg.includes('Proxy 5')) {
+    userMsg += 'Server error — try again in a moment';
+  } else if (errMsg.toLowerCase().includes('media') || errMsg.toLowerCase().includes('image')) {
+    userMsg += 'Image format issue — save as PNG/JPEG and retry';
+  } else if (errMsg.includes('JSON') || errMsg.includes('parse')) {
+    userMsg += 'AI could not parse layout — try a clearer full-screen shot';
+  } else if (errMsg.includes('No stocks') || errMsg.includes('No valid')) {
+    userMsg += 'No holdings detected — make sure positions are visible';
+  } else {
+    userMsg += 'Failed: ' + errMsg.substring(0, 60);
+  }
+  showToast(userMsg);
+}
+
 
 function renderDetectedStocks(){
   document.getElementById('screenshot-detected-list').innerHTML=detectedStocks.map((s,i)=>{
