@@ -2416,28 +2416,87 @@ async function addToWatchlist() {
 // AI CHAT
 // ==========================================
 async function askAI() {
-  const input=document.getElementById('ai-question'); const q=input.value.trim(); if(!q)return; input.value='';
-  const msgs=document.getElementById('ai-messages');
-  msgs.innerHTML+='<div style="text-align:right;margin-top:10px"><div style="display:inline-block;background:rgba(91,143,255,.15);border:1px solid rgba(91,143,255,.3);border-radius:12px 12px 0 12px;padding:10px 14px;font-size:14px;max-width:85%">'+q+'</div></div>';
-  const thId='th-'+Date.now();
-  msgs.innerHTML+='<div id="'+thId+'" style="margin-top:10px"><div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:12px 12px 12px 0;padding:10px 14px;font-size:14px;color:var(--muted)"><span class="loading-dot"></span> Thinking...</div></div>';
-  msgs.scrollTop=msgs.scrollHeight;
-  const all=[...usHoldings.map(h=>{const p=stockCache[h.ticker];const price=p?.price||h.cost;return h.ticker+'(US $'+price.toFixed(2)+',P&L'+(((price-h.cost)/h.cost)*100).toFixed(1)+'%)';}),
-    ...indiaHoldings.map(h=>{const p=indiaCache[h.ticker];const price=p?.price||h.cost;return h.ticker+'(NSE ₹'+price.toFixed(2)+',P&L'+(((price-h.cost)/h.cost)*100).toFixed(1)+'%)';})]
-  const ctx=all.length?'Portfolio: '+all.join(' | ')+'. FX:1 USD=₹'+(fxRateINR?fxRateINR.toFixed(2):'83.5'):'No holdings yet.';
-  if(chatHistory.length>6) chatHistory=chatHistory.slice(-6);
-  chatHistory.push({role:'user',content:q});
+  const input = document.getElementById('ai-question');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+
+  const msgs = document.getElementById('ai-messages');
+  msgs.innerHTML += '<div style="text-align:right;margin-top:10px"><div style="display:inline-block;background:rgba(91,143,255,.15);border:1px solid rgba(91,143,255,.3);border-radius:12px 12px 0 12px;padding:10px 14px;font-size:14px;max-width:85%">' + q + '</div></div>';
+  const thId = 'th-' + Date.now();
+  msgs.innerHTML += '<div id="' + thId + '" style="margin-top:10px"><div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:12px 12px 12px 0;padding:10px 14px;font-size:14px;color:var(--muted)"><span class="loading-dot"></span> Thinking...</div></div>';
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Build portfolio context
+  const all = [
+    ...usHoldings.map(h => {
+      const p = stockCache[h.ticker];
+      const price = p?.price || h.cost;
+      return h.ticker + '(US $' + price.toFixed(2) + ',P&L' + (((price - h.cost) / h.cost) * 100).toFixed(1) + '%)';
+    }),
+    ...indiaHoldings.map(h => {
+      const p = indiaCache[h.ticker];
+      const price = p?.price || h.cost;
+      return h.ticker + '(NSE ₹' + price.toFixed(2) + ',P&L' + (((price - h.cost) / h.cost) * 100).toFixed(1) + '%)';
+    })
+  ];
+  const ctx = all.length
+    ? 'Portfolio: ' + all.join(' | ') + '. FX: 1 USD = ₹' + (fxRateINR ? fxRateINR.toFixed(2) : '83.5')
+    : 'User has no holdings yet.';
+
+  // Trim history BEFORE building request. Keep only valid alternating turns.
+  if (chatHistory.length > 6) chatHistory = chatHistory.slice(-6);
+
+  // Build a fresh messages array. Prepend instructions into the FIRST user turn
+  // instead of using the `system` field (proxy may strip it).
+  const instructions =
+    'You are a concise financial advisor for US and Indian markets. ' +
+    ctx + '. Keep responses under 120 words. Be direct.\n\n' +
+    'User question: ' + q;
+
+  const messagesForApi = chatHistory.length === 0
+    ? [{ role: 'user', content: instructions }]
+    : [...chatHistory, { role: 'user', content: q }];
+
   try {
-    const res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:350,system:'You are a concise financial advisor for US and Indian markets. '+ctx+'. Max 120 words. Be direct.',messages:chatHistory})});
-    const data=await res.json();
-    const reply=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
-    chatHistory.push({role:'assistant',content:reply});
-    const fmt=reply.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^- (.*?)$/gm,'<div style="padding:2px 0 2px 12px">• $1</div>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
-    document.getElementById(thId).innerHTML='<div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;line-height:1.6">'+fmt+'</div>';
-  } catch(e) {
-    document.getElementById(thId).innerHTML='<div style="background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;color:var(--red)">Unable to connect. Please try again.</div>';
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 350,
+        messages: messagesForApi
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error('Proxy ' + res.status + ': ' + errText.substring(0, 200));
+    }
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+    const reply = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+    if (!reply) throw new Error('Empty reply from model');
+
+    // ✅ Only commit to chatHistory on success
+    chatHistory.push({ role: 'user', content: chatHistory.length === 0 ? instructions : q });
+    chatHistory.push({ role: 'assistant', content: reply });
+
+    const fmt = reply
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^- (.*?)$/gm, '<div style="padding:2px 0 2px 12px">• $1</div>')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+    document.getElementById(thId).innerHTML =
+      '<div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;line-height:1.6">' + fmt + '</div>';
+  } catch (e) {
+    console.error('askAI failed:', e);
+    document.getElementById(thId).innerHTML =
+      '<div style="background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.2);border-radius:12px 12px 12px 0;padding:12px 14px;font-size:14px;color:var(--red)">⚠️ ' + (e.message || 'Connection failed') + '</div>';
   }
-  msgs.scrollTop=msgs.scrollHeight;
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ==========================================
