@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Stockwise — Portfolio AI</title>
@@ -297,6 +297,204 @@
   .div-top-payers{margin-top:14px;position:relative;z-index:1}
   .div-subhead{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
   .div-empty-hint{font-size:12px;color:var(--muted);text-align:center;padding:14px;font-style:italic}
+
+  /* =====================================================================
+     RESPONSIVE OVERRIDES — additive only. Mobile (≤640px) is unchanged.
+     Strategy:
+       - >640px tablet: widen the centered app shell, 2-col holdings/news.
+       - ≥1024px desktop: switch bottom nav to left side rail, multi-col
+         content grids, sheets become centered modal dialogs.
+       - ≥1440px wide desktop: 4-col grids.
+     Zero JavaScript changes — every selector below targets existing markup.
+     ===================================================================== */
+
+  /* --- TABLET (641px+) ------------------------------------------------ */
+  @media (min-width: 641px) {
+    body { max-width: 760px; }
+    #auth-screen { max-width: 760px; }
+    #auth-screen > div:last-child { max-width: 420px; margin: 0 auto; }
+    .bottom-nav { max-width: 760px; }
+    .sheet { max-width: 760px; }
+
+    /* Two-column grids for repeatable content */
+    #us-holdings-list,
+    #india-holdings-list,
+    #us-watchlist-list,
+    #india-watchlist-list,
+    #suggestions-list,
+    #news-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    #us-holdings-list > .holding-card,
+    #india-holdings-list > .holding-card,
+    #us-watchlist-list > .holding-card,
+    #india-watchlist-list > .holding-card,
+    #suggestions-list > .ai-card,
+    #news-list > .news-card {
+      margin-bottom: 0;
+    }
+    /* Empty / skeleton states span the row so they don't get squished */
+    #us-holdings-list > .empty-state,
+    #india-holdings-list > .empty-state,
+    #suggestions-list > .empty-state,
+    #news-list > .empty-state,
+    #us-holdings-list > .skeleton,
+    #india-holdings-list > .skeleton,
+    #us-watchlist-list > .skeleton,
+    #india-watchlist-list > .skeleton {
+      grid-column: 1 / -1;
+    }
+
+    /* Dashboard + markets: more breathing room on tablet */
+    .dash-stats-grid { grid-template-columns: repeat(4, 1fr); }
+    .market-overview { grid-template-columns: repeat(4, 1fr); }
+    .chart-wrapper   { height: 240px; }
+
+    .ai-chat-btn { bottom: 100px; right: 32px; }
+  }
+
+  /* --- DESKTOP (1024px+) --------------------------------------------- */
+  @media (min-width: 1024px) {
+    /* Body: full width with room for left side-nav rail */
+    body {
+      max-width: 100%;
+      padding-left: 220px;        /* width of side nav */
+    }
+
+    /* Constrain the app content and center it */
+    #app-screen {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 12px;
+    }
+    .header  { padding: 16px 8px 0; }
+    .content { padding: 0 8px 60px; }
+
+    /* Auth — centered card */
+    #auth-screen {
+      max-width: 100%;
+      padding: 0 24px;
+    }
+    #auth-screen > div:last-child { max-width: 420px; margin: 0 auto; }
+
+    /* --- SIDE NAV ---------------------------------------------------- */
+    .bottom-nav {
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 220px;
+      max-width: none;
+      transform: none;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: 24px 14px;
+      gap: 4px;
+      border-top: none;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    .bottom-nav::before {
+      content: 'Stockwise';
+      display: block;
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      padding: 4px 12px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .nav-item {
+      flex: 0 0 auto;
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      transition: background .15s;
+    }
+    .nav-item:hover  { background: var(--surface2); }
+    .nav-item.active { background: rgba(0, 229, 160, 0.08); }
+    .nav-icon  { font-size: 20px; }
+    .nav-label { font-size: 14px; }
+
+    body.theme-light .bottom-nav {
+      background: #ffffff;
+      border-right: 1px solid rgba(0, 0, 0, .08);
+    }
+
+    /* --- MULTI-COLUMN CONTENT --------------------------------------- */
+    #us-holdings-list,
+    #india-holdings-list,
+    #us-watchlist-list,
+    #india-watchlist-list,
+    #suggestions-list,
+    #news-list {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .dash-stats-grid { grid-template-columns: repeat(4, 1fr); }
+    .market-overview { grid-template-columns: repeat(4, 1fr); }
+    .chart-wrapper   { height: 320px; }
+
+    /* --- MODAL SHEETS on desktop ------------------------------------- */
+    .sheet {
+      bottom: auto;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.96);
+      width: min(560px, 90vw);
+      max-width: 560px;
+      max-height: 86vh;
+      border-radius: 24px;
+      padding: 12px 28px 28px;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform .25s cubic-bezier(.2, .9, .3, 1.2), opacity .2s;
+    }
+    .sheet.open {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+      pointer-events: all;
+    }
+    .sheet-handle { display: none; }
+    .sheet-title { margin-top: 8px; }
+
+    /* AI chat sheet message area can be taller on desktop */
+    #ai-messages { max-height: 50vh !important; }
+
+    /* FAB stays clear of side nav */
+    .ai-chat-btn {
+      bottom: 32px;
+      right: 32px;
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+    }
+
+    /* Toast at top to avoid mid-screen interference */
+    .toast { top: 24px; }
+
+    /* Theme grid stays 4-wide */
+    .theme-sheet-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  /* --- WIDE DESKTOP (1440px+) ---------------------------------------- */
+  @media (min-width: 1440px) {
+    #app-screen { max-width: 1320px; }
+    #us-holdings-list,
+    #india-holdings-list,
+    #us-watchlist-list,
+    #india-watchlist-list,
+    #suggestions-list,
+    #news-list {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
 </style>
 </head>
 <body class="theme-midnight">
